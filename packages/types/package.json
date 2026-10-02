@@ -1,0 +1,37 @@
+{
+  "name": "@shikkhacore/types",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared ShikkhaCore contracts: Zod schemas, permission catalog, error codes and API types.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --disable-warning=ExperimentalWarning' jest"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@jest/globals": "30.5.2",
+    "@shikkhacore/eslint-config": "workspace:*",
+    "@shikkhacore/tsconfig": "workspace:*",
+    "@types/node": "24.19.1",
+    "eslint": "9.39.5",
+    "jest": "30.5.2",
+    "ts-jest": "29.4.14",
+    "typescript": "6.0.3"
+  }
+}

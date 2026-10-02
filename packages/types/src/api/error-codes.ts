@@ -1,0 +1,44 @@
+/**
+ * Machine-readable error codes returned in `error.code`.
+ * Clients branch and localise on these codes, never on `error.message`.
+ */
+export const ERROR_CODES = [
+  // Generic
+  'VALIDATION_FAILED',
+  'NOT_FOUND',
+  'CONFLICT',
+  'RATE_LIMITED',
+  'INTERNAL_ERROR',
+  'SERVICE_UNAVAILABLE',
+
+  // Request integrity
+  'CSRF_REJECTED',
+  'HOST_NOT_RECOGNIZED',
+
+  // Authentication
+  'UNAUTHENTICATED',
+  'INVALID_CREDENTIALS',
+  'EMAIL_NOT_VERIFIED',
+  'ACCOUNT_DISABLED',
+  'ACCOUNT_LOCKED',
+  'TOKEN_INVALID',
+
+  // Tenancy
+  'SCHOOL_NOT_FOUND',
+  'SCHOOL_SUSPENDED',
+  'TENANT_REQUIRED',
+  'TENANT_ACCESS_DENIED',
+  'SLUG_TAKEN',
+
+  // Authorisation
+  'PERMISSION_DENIED',
+  'PLATFORM_ACCESS_DENIED',
+  'ROLE_ASSIGNMENT_FORBIDDEN',
+  'LAST_OWNER_REQUIRED',
+
+  // Resources
+  'MEMBER_NOT_FOUND',
+  'ROLE_NOT_FOUND',
+] as const;
+
+export type ErrorCode = (typeof ERROR_CODES)[number];
