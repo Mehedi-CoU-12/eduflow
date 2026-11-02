@@ -62,7 +62,7 @@ export const PERMISSIONS = {
   'subscription.manage': {
     realm: 'school',
     module: 'school',
-    description: "Manage the school's ShikkhaCore subscription and billing",
+    description: "Manage the school's EduFlow subscription and billing",
     scopes: ALL,
   },
 
