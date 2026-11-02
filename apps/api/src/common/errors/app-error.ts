@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import type { ErrorCode, ValidationIssue } from '@shikkhacore/types';
+import type { ErrorCode, ValidationIssue } from '@eduflow/types';
 
 export type AppErrorDetails = ValidationIssue[] | Record<string, unknown>;
 
