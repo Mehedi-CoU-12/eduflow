@@ -22,3 +22,19 @@ export const updateMemberRolesSchema = z.object({
     .transform((ids) => [...new Set(ids)]),
 });
 export type UpdateMemberRolesInput = z.infer<typeof updateMemberRolesSchema>;
+
+export const inviteMemberSchema = z.object({
+  email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
+  name: z.string().trim().min(1).max(120),
+  roleIds: z
+    .array(z.uuid())
+    .min(1)
+    .max(10)
+    .transform((ids) => [...new Set(ids)]),
+});
+export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
+
+export const updateMemberStatusSchema = z.object({
+  status: z.enum(['active', 'suspended', 'removed']),
+});
+export type UpdateMemberStatusInput = z.infer<typeof updateMemberStatusSchema>;
