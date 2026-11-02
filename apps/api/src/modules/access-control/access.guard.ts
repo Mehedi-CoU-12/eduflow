@@ -82,5 +82,5 @@ export class AccessGuard implements CanActivate {
 function assertRecognisedHost(host: HostContext): asserts host is Exclude<HostContext, { kind: 'unknown' }> {
   if (host.kind !== 'unknown') return;
   if (host.reason === 'school_not_found') throw AppError.notFound('SCHOOL_NOT_FOUND', 'No school uses this address');
-  throw AppError.notFound('HOST_NOT_RECOGNIZED', 'This address is not a ShikkhaCore site');
+  throw AppError.notFound('HOST_NOT_RECOGNIZED', 'This address is not a EduFlow site');
 }
