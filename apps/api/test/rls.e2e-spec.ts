@@ -1,6 +1,6 @@
 /**
  * Tenant isolation at the DATABASE level. These tests talk to PostgreSQL directly as
- * the `shikkhacore_app` role, bypassing all application code, to prove that row level
+ * the `eduflow_app` role, bypassing all application code, to prove that row level
  * security alone keeps schools apart.
  */
 import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
@@ -220,7 +220,7 @@ describe('row level security (database level)', () => {
     const tables = await system.$queryRaw<{ table: string; rls: boolean; has_school_id: boolean; app_policies: number }[]>`
       SELECT c.relname AS table, c.relrowsecurity AS rls,
         EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'school_id' AND NOT a.attisdropped) AS has_school_id,
-        (SELECT count(*)::int FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename = c.relname AND 'shikkhacore_app' = ANY (p.roles)) AS app_policies
+        (SELECT count(*)::int FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename = c.relname AND 'eduflow_app' = ANY (p.roles)) AS app_policies
       FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind = 'r'`;
 

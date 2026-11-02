@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
 
-export const TEST_DATABASE = 'shikkhacore_test';
+export const TEST_DATABASE = 'eduflow_test';
 const TEST_REDIS_DB = 15;
 
 function withDatabase(url: string, database: string): string {
@@ -29,7 +29,7 @@ function sourceEnv(): Record<string, string | undefined> {
 /**
  * Environment for integration tests: connection details come from apps/api/.env (or
  * the real environment, e.g. in CI) but every store is redirected to test-only
- * resources — the `shikkhacore_test` database and Redis database 15 — so tests can
+ * resources — the `eduflow_test` database and Redis database 15 — so tests can
  * never touch development data. Override with TEST_DATABASE_URL etc. if needed.
  */
 export function buildTestEnv(): Record<string, string> {
@@ -63,7 +63,7 @@ export function buildTestEnv(): Record<string, string> {
     LOGIN_MAX_FAILURES: '10',
     LOGIN_LOCKOUT_MINUTES: '15',
     MAIL_TRANSPORT: 'memory',
-    MAIL_FROM: 'ShikkhaCore Test <test@shikkhacore.local>',
+    MAIL_FROM: 'EduFlow Test <test@eduflow.local>',
     ACCESS_CONTROL_SYNC_ON_BOOT: 'true',
   };
 }

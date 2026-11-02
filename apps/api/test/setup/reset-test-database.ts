@@ -24,9 +24,9 @@ async function resetTestDatabase(): Promise<void> {
   await admin.connect();
   try {
     await admin.query(`DROP DATABASE IF EXISTS "${database}"`);
-    await admin.query(`CREATE DATABASE "${database}" OWNER shikkhacore_owner`);
+    await admin.query(`CREATE DATABASE "${database}" OWNER eduflow_owner`);
     await admin.query(`REVOKE ALL ON DATABASE "${database}" FROM PUBLIC`);
-    await admin.query(`GRANT CONNECT ON DATABASE "${database}" TO shikkhacore_app, shikkhacore_system`);
+    await admin.query(`GRANT CONNECT ON DATABASE "${database}" TO eduflow_app, eduflow_system`);
   } finally {
     await admin.end();
   }
