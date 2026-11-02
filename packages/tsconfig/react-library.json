@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "ShikkhaCore React library (source consumed by Next.js)",
+  "display": "EduFlow React library (source consumed by Next.js)",
   "extends": "./base.json",
   "compilerOptions": {
     "target": "es2022",
