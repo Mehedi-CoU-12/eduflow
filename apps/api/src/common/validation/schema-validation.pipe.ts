@@ -4,7 +4,7 @@ import {
   type ArgumentMetadata,
   type StandardSchemaValidationPipeOptions,
 } from '@nestjs/common';
-import type { ValidationIssue } from '@shikkhacore/types';
+import type { ValidationIssue } from '@eduflow/types';
 
 import { AppError } from '../errors/app-error.js';
 
