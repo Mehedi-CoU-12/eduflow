@@ -1,4 +1,4 @@
-import type { PlatformPermissionKey, RoleSummaryDto } from '@shikkhacore/types';
+import type { PlatformPermissionKey, RoleSummaryDto } from '@eduflow/types';
 
 import type { PermissionSet } from '../access-control/permission-set.js';
 
