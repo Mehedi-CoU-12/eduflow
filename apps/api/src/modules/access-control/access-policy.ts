@@ -1,5 +1,5 @@
 import { Reflector } from '@nestjs/core';
-import type { PlatformPermissionKey, SchoolPermissionKey } from '@shikkhacore/types';
+import type { PlatformPermissionKey, SchoolPermissionKey } from '@eduflow/types';
 
 /**
  * Every route declares exactly one access policy. Routes without one are rejected at
@@ -15,7 +15,7 @@ export type AccessPolicy =
 export const Access = Reflector.createDecorator<AccessPolicy>();
 
 /**
- * No session required. The host must still be a recognised ShikkhaCore host unless
+ * No session required. The host must still be a recognised EduFlow host unless
  * `anyHost` is set (health checks hit the API by IP).
  */
 export const Public = (options: { anyHost?: boolean } = {}) =>
