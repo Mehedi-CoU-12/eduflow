@@ -1,5 +1,5 @@
 import { Controller, Get, HttpStatus, Inject, Res } from '@nestjs/common';
-import type { HealthDto } from '@shikkhacore/types';
+import type { HealthDto } from '@eduflow/types';
 import type { Response } from 'express';
 import type { Redis } from 'ioredis';
 

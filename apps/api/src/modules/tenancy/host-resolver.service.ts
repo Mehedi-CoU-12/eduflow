@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { classifyHost } from '@shikkhacore/types';
+import { classifyHost } from '@eduflow/types';
 
 import { APP_CONFIG } from '../../config/config.module.js';
 import type { AppConfig } from '../../config/env.js';

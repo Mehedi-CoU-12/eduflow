@@ -119,7 +119,7 @@ export const PLATFORM_SYSTEM_ROLES = {
   platform_owner: {
     realm: 'platform',
     name: 'Platform Owner',
-    description: 'Operates the ShikkhaCore platform.',
+    description: 'Operates the EduFlow platform.',
     grants: grantAll(PLATFORM_PERMISSION_KEYS),
   },
 } as const satisfies Record<string, SystemRoleDefinition<PlatformPermissionKey>>;

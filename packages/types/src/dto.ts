@@ -1,5 +1,5 @@
 /**
- * Response shapes returned inside `data` by the ShikkhaCore API.
+ * Response shapes returned inside `data` by the EduFlow API.
  * Dates are ISO 8601 strings.
  */
 import type {
@@ -125,4 +125,24 @@ export interface PlatformOverviewDto {
 export interface HealthDto {
   status: 'ok' | 'degraded';
   checks: Record<string, 'up' | 'down'>;
+}
+
+export interface AuditLogDto {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  actor: { id: string; name: string; email: string } | null;
+  before: unknown;
+  after: unknown;
+  metadata: unknown;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface PlatformUserDto extends UserDto {
+  status: string;
+  schoolCount: number;
+  createdAt: string;
 }

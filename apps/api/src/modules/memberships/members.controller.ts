@@ -1,12 +1,16 @@
-import { Body, Controller, Get, Param, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import {
+  inviteMemberSchema,
   listMembersQuerySchema,
   updateMemberRolesSchema,
+  updateMemberStatusSchema,
   uuidSchema,
+  type InviteMemberInput,
   type ListMembersQuery,
   type MemberDto,
   type UpdateMemberRolesInput,
-} from '@shikkhacore/types';
+  type UpdateMemberStatusInput,
+} from '@eduflow/types';
 
 import type { Page } from '../../common/http/page.js';
 import type { RequestMeta } from '../../common/http/request-context.js';
@@ -29,6 +33,16 @@ export class MembersController {
     return this.members.list(tenant, query);
   }
 
+  @Post('invite')
+  @RequirePermissions('users.invite')
+  invite(
+    @CurrentTenant() tenant: TenantContext,
+    @Body({ schema: inviteMemberSchema }) input: InviteMemberInput,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<MemberDto> {
+    return this.members.invite(tenant, input, meta);
+  }
+
   @Get(':membershipId')
   @RequirePermissions('users.view')
   get(
@@ -47,5 +61,26 @@ export class MembersController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<MemberDto> {
     return this.members.updateRoles(tenant, membershipId, input, meta);
+  }
+
+  @Patch(':membershipId/status')
+  @RequirePermissions('users.update')
+  updateStatus(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('membershipId', { schema: uuidSchema }) membershipId: string,
+    @Body({ schema: updateMemberStatusSchema }) input: UpdateMemberStatusInput,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<MemberDto> {
+    return this.members.updateStatus(tenant, membershipId, input, meta);
+  }
+
+  @Delete(':membershipId')
+  @RequirePermissions('users.remove')
+  remove(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('membershipId', { schema: uuidSchema }) membershipId: string,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<MemberDto> {
+    return this.members.remove(tenant, membershipId, meta);
   }
 }

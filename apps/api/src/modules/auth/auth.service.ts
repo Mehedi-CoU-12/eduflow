@@ -6,7 +6,7 @@ import {
   type SessionContextDto,
   type SignupInput,
   type UserDto,
-} from '@shikkhacore/types';
+} from '@eduflow/types';
 
 import { AppError } from '../../common/errors/app-error.js';
 import type { RequestMeta } from '../../common/http/request-context.js';
@@ -288,7 +288,7 @@ export class AuthService {
       case 'root':
         return;
       case 'unknown':
-        throw AppError.notFound('HOST_NOT_RECOGNIZED', 'This address is not a ShikkhaCore site');
+        throw AppError.notFound('HOST_NOT_RECOGNIZED', 'This address is not a EduFlow site');
     }
   }
 

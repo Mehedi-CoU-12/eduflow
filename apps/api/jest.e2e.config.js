@@ -1,6 +1,6 @@
 /**
  * Integration and API tests against real PostgreSQL and Redis (`pnpm infra:up`).
- * The global setup recreates the `shikkhacore_test` database and applies all migrations.
+ * The global setup recreates the `eduflow_test` database and applies all migrations.
  * Suites run serially because they share that database.
  * @type {import('jest').Config}
  */

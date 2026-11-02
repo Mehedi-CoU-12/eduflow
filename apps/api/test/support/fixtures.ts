@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 
-import type { PermissionScope, SchoolPermissionKey, SystemRoleKey } from '@shikkhacore/types';
+import type { PermissionScope, SchoolPermissionKey, SystemRoleKey } from '@eduflow/types';
 import request, { type Response } from 'supertest';
 
 import type { PrismaClient } from '../../src/infrastructure/database/prisma.js';

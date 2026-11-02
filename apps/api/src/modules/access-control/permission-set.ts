@@ -3,7 +3,7 @@ import {
   type PermissionGrantDto,
   type PermissionKey,
   type PermissionScope,
-} from '@shikkhacore/types';
+} from '@eduflow/types';
 
 export interface Grant<K extends PermissionKey = PermissionKey> {
   readonly key: K;

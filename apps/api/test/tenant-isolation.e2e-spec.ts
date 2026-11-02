@@ -3,7 +3,7 @@
  * reach School B data must fail without revealing anything about School B.
  */
 import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
-import type { MemberDto, RoleDto } from '@shikkhacore/types';
+import type { MemberDto, RoleDto } from '@eduflow/types';
 import request from 'supertest';
 
 import {

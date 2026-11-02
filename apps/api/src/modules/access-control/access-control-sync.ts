@@ -1,4 +1,4 @@
-import { PERMISSIONS, PERMISSION_KEYS, SYSTEM_ROLES, SYSTEM_ROLE_KEYS, type PermissionKey } from '@shikkhacore/types';
+import { PERMISSIONS, PERMISSION_KEYS, SYSTEM_ROLES, SYSTEM_ROLE_KEYS, type PermissionKey } from '@eduflow/types';
 
 import type { PrismaClient } from '../../infrastructure/database/prisma.js';
 
@@ -10,7 +10,7 @@ export interface SyncSummary {
 
 /**
  * Brings the `permissions`, system `roles` and their `role_permissions` in line with the
- * catalog in @shikkhacore/types. Additive only: it inserts and updates, never deletes,
+ * catalog in @eduflow/types. Additive only: it inserts and updates, never deletes,
  * so instances running an older release during a rolling deploy cannot revoke access.
  * Removing a permission or a system-role grant requires an explicit migration.
  *
@@ -20,7 +20,7 @@ export interface SyncSummary {
 export async function syncAccessControl(db: PrismaClient): Promise<SyncSummary> {
   return db.$transaction(
     async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('shikkhacore:access-control-sync'))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('eduflow:access-control-sync'))`;
 
       for (const key of PERMISSION_KEYS) {
         const definition = PERMISSIONS[key];

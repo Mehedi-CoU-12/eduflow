@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, isLocale, type Locale } from '@shikkhacore/types';
+import { DEFAULT_LOCALE, isLocale, type Locale } from '@eduflow/types';
 
 export interface RenderedMail {
   readonly subject: string;
@@ -37,13 +37,33 @@ function linkEmail(subject: string, greeting: string, body: string, action: stri
   };
 }
 
-const templates: Record<'verifyEmail' | 'passwordReset' | 'accountExists', Record<Locale, Template>> = {
+const templates: Record<'verifyEmail' | 'passwordReset' | 'accountExists' | 'schoolInvite', Record<Locale, Template>> = {
+  schoolInvite: {
+    en: ({ name, url }) =>
+      linkEmail(
+        'You have been invited to join a school',
+        `Hello ${name},`,
+        'You have been invited to join a school on EduFlow. Click below to access your school portal.',
+        'Open School Portal',
+        "If you were not expecting this invitation, you can ignore this email.",
+        url,
+      ),
+    bn: ({ name, url }) =>
+      linkEmail(
+        'আপনাকে একটি স্কুলে যোগদানের আমন্ত্রণ জানানো হয়েছে',
+        `নমস্কার/সালাম ${name},`,
+        'আপনাকে শিক্ষা-কোরের একটি স্কুলে যোগদানের আমন্ত্রণ জানানো হয়েছে। স্কুল পোর্টালে প্রবেশ করতে নিচে ক্লিক করুন।',
+        'স্কুল পোর্টাল খুলুন',
+        'আপনি যদি এই আমন্ত্রণটি আশা না করে থাকেন, তবে এই ইমেলটি উপেক্ষা করতে পারেন।',
+        url,
+      ),
+  },
   verifyEmail: {
     en: ({ name, url }) =>
       linkEmail(
         'Verify your email address',
         `Hello ${name},`,
-        'Confirm your email address to finish creating your ShikkhaCore account. The link expires in 24 hours.',
+        'Confirm your email address to finish creating your EduFlow account. The link expires in 24 hours.',
         'Verify email',
         "If you didn't create an account, you can ignore this email.",
         url,
@@ -52,7 +72,7 @@ const templates: Record<'verifyEmail' | 'passwordReset' | 'accountExists', Recor
       linkEmail(
         'আপনার ইমেইল ঠিকানা যাচাই করুন',
         `প্রিয় ${name},`,
-        'আপনার ShikkhaCore অ্যাকাউন্ট তৈরি সম্পন্ন করতে ইমেইল ঠিকানাটি নিশ্চিত করুন। লিংকটি ২৪ ঘণ্টা পর্যন্ত কার্যকর থাকবে।',
+        'আপনার EduFlow অ্যাকাউন্ট তৈরি সম্পন্ন করতে ইমেইল ঠিকানাটি নিশ্চিত করুন। লিংকটি ২৪ ঘণ্টা পর্যন্ত কার্যকর থাকবে।',
         'ইমেইল যাচাই করুন',
         'আপনি অ্যাকাউন্ট না খুলে থাকলে এই ইমেইলটি উপেক্ষা করুন।',
         url,
@@ -63,7 +83,7 @@ const templates: Record<'verifyEmail' | 'passwordReset' | 'accountExists', Recor
       linkEmail(
         'Reset your password',
         `Hello ${name},`,
-        'We received a request to reset your ShikkhaCore password. The link expires in 1 hour and can be used once.',
+        'We received a request to reset your EduFlow password. The link expires in 1 hour and can be used once.',
         'Reset password',
         "If you didn't ask to reset your password, you can ignore this email.",
         url,
@@ -72,7 +92,7 @@ const templates: Record<'verifyEmail' | 'passwordReset' | 'accountExists', Recor
       linkEmail(
         'আপনার পাসওয়ার্ড রিসেট করুন',
         `প্রিয় ${name},`,
-        'আমরা আপনার ShikkhaCore পাসওয়ার্ড রিসেট করার একটি অনুরোধ পেয়েছি। লিংকটি ১ ঘণ্টা কার্যকর থাকবে এবং একবারই ব্যবহার করা যাবে।',
+        'আমরা আপনার EduFlow পাসওয়ার্ড রিসেট করার একটি অনুরোধ পেয়েছি। লিংকটি ১ ঘণ্টা কার্যকর থাকবে এবং একবারই ব্যবহার করা যাবে।',
         'পাসওয়ার্ড রিসেট করুন',
         'আপনি অনুরোধ না করে থাকলে এই ইমেইলটি উপেক্ষা করুন।',
         url,
@@ -81,7 +101,7 @@ const templates: Record<'verifyEmail' | 'passwordReset' | 'accountExists', Recor
   accountExists: {
     en: ({ name, url }) =>
       linkEmail(
-        'You already have a ShikkhaCore account',
+        'You already have a EduFlow account',
         `Hello ${name},`,
         'Someone tried to sign up with this email address, but an account already exists. You can sign in, or reset your password if you have forgotten it.',
         'Sign in',
@@ -90,7 +110,7 @@ const templates: Record<'verifyEmail' | 'passwordReset' | 'accountExists', Recor
       ),
     bn: ({ name, url }) =>
       linkEmail(
-        'আপনার একটি ShikkhaCore অ্যাকাউন্ট আগে থেকেই আছে',
+        'আপনার একটি EduFlow অ্যাকাউন্ট আগে থেকেই আছে',
         `প্রিয় ${name},`,
         'কেউ এই ইমেইল ঠিকানা দিয়ে নতুন অ্যাকাউন্ট খোলার চেষ্টা করেছেন, কিন্তু অ্যাকাউন্টটি আগে থেকেই আছে। আপনি সাইন ইন করতে পারেন, অথবা পাসওয়ার্ড ভুলে গেলে রিসেট করতে পারেন।',
         'সাইন ইন',

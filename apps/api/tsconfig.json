@@ -1,5 +1,5 @@
 {
-  "extends": "@shikkhacore/tsconfig/nestjs.json",
+  "extends": "@eduflow/tsconfig/nestjs.json",
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "dist",

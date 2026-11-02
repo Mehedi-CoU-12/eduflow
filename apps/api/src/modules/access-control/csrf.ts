@@ -1,4 +1,4 @@
-import { normalizeHostname } from '@shikkhacore/types';
+import { normalizeHostname } from '@eduflow/types';
 import type { Request } from 'express';
 
 import { AppError } from '../../common/errors/app-error.js';
@@ -9,7 +9,7 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
  * CSRF defence for cookie-authenticated, state-changing requests.
  *
  * SameSite=Lax cookies are not enough on their own: every school subdomain shares the
- * registrable domain, so `evil.shikkhacore.com` counts as same-site. The API is served
+ * registrable domain, so `evil.eduflow.com` counts as same-site. The API is served
  * same-origin with the web app (/api on the school's own host), so legitimate browser
  * requests are always same-origin:
  *

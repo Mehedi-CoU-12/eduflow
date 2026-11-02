@@ -16,7 +16,7 @@ import {
   type SignupInput,
   type SwitchSchoolInput,
   type VerifyEmailInput,
-} from '@shikkhacore/types';
+} from '@eduflow/types';
 import type { Request, Response } from 'express';
 
 import type { RequestMeta } from '../../common/http/request-context.js';

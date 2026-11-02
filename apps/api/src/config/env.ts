@@ -1,4 +1,4 @@
-import type { HostConfig } from '@shikkhacore/types';
+import type { HostConfig } from '@eduflow/types';
 import { z } from 'zod';
 
 const bool = z.enum(['true', 'false']).transform((value) => value === 'true');
@@ -27,7 +27,7 @@ const envSchema = z
     QUEUE_PREFIX: z
       .string()
       .regex(/^[A-Za-z0-9:_-]+$/)
-      .default('shikkhacore'),
+      .default('eduflow'),
     WORKER_ENABLED: bool.default(true),
 
     APP_PUBLIC_URL: z.url(),
@@ -51,7 +51,7 @@ const envSchema = z
 
     MAIL_TRANSPORT: z.enum(['smtp', 'log', 'memory']).default('log'),
     SMTP_URL: z.string().optional(),
-    MAIL_FROM: z.string().min(3).default('ShikkhaCore <no-reply@shikkhacore.local>'),
+    MAIL_FROM: z.string().min(3).default('EduFlow <no-reply@eduflow.local>'),
 
     ACCESS_CONTROL_SYNC_ON_BOOT: bool.default(true),
   })

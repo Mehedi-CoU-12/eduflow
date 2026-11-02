@@ -1,5 +1,5 @@
 {
-  "extends": "@shikkhacore/tsconfig/node-library.json",
+  "extends": "@eduflow/tsconfig/node-library.json",
   "compilerOptions": {
     "rootDir": ".",
     "noEmit": true,

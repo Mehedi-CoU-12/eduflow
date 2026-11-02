@@ -1,3 +1,3 @@
-import { base } from '@shikkhacore/eslint-config/base';
+import { base } from '@eduflow/eslint-config/base';
 
 export default base;

@@ -1,6 +1,12 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { createSchoolSchema, type CreateSchoolInput, type SchoolDto } from '@shikkhacore/types';
+import {
+  createSchoolSchema,
+  updateSchoolSchema,
+  type CreateSchoolInput,
+  type SchoolDto,
+  type UpdateSchoolInput,
+} from '@eduflow/types';
 
 import type { RequestMeta } from '../../common/http/request-context.js';
 import { Authenticated, RequirePermissions } from '../access-control/access-policy.js';
@@ -31,5 +37,16 @@ export class SchoolsController {
   @RequirePermissions('school.view')
   current(@CurrentTenant() tenant: TenantContext): Promise<SchoolDto> {
     return this.schools.current(tenant);
+  }
+
+  /** Updates the current school profile. */
+  @Patch('school')
+  @RequirePermissions('school.update')
+  update(
+    @CurrentTenant() tenant: TenantContext,
+    @Body({ schema: updateSchoolSchema }) input: UpdateSchoolInput,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<SchoolDto> {
+    return this.schools.update(tenant, input, meta);
   }
 }

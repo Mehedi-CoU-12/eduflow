@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { isLocale, isSchoolPermissionKey, type RoleSummaryDto, type SchoolPermissionKey } from '@shikkhacore/types';
+import { isLocale, isSchoolPermissionKey, type RoleSummaryDto, type SchoolPermissionKey } from '@eduflow/types';
 
 import { AppError } from '../../common/errors/app-error.js';
 import { AppDatabase } from '../../infrastructure/database/app-database.js';
@@ -112,7 +112,7 @@ export class TenantResolverService {
       case 'platform':
         throw AppError.badRequest('TENANT_REQUIRED', 'School features are not available on the platform host');
       case 'unknown':
-        throw AppError.notFound('HOST_NOT_RECOGNIZED', 'This address is not a ShikkhaCore site');
+        throw AppError.notFound('HOST_NOT_RECOGNIZED', 'This address is not a EduFlow site');
     }
   }
 }

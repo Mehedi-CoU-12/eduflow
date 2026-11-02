@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { ListMembersQuery } from '@shikkhacore/types';
+import type { ListMembersQuery } from '@eduflow/types';
 
 import { decodeCursor } from '../../common/http/cursor.js';
 import type { TenantTx } from '../../infrastructure/database/app-database.js';

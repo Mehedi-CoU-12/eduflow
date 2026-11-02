@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { isLocale, type PublicTenantDto } from '@shikkhacore/types';
+import { isLocale, type PublicTenantDto } from '@eduflow/types';
 
 import { Public } from '../access-control/access-policy.js';
 import { CurrentHost } from '../access-control/request-decorators.js';

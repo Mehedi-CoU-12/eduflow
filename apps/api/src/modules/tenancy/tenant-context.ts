@@ -1,4 +1,4 @@
-import type { Locale, OnboardingStatus, RoleSummaryDto, SchoolPermissionKey, SchoolStatus } from '@shikkhacore/types';
+import type { Locale, OnboardingStatus, RoleSummaryDto, SchoolPermissionKey, SchoolStatus } from '@eduflow/types';
 
 import type { TenantScope } from '../../infrastructure/database/app-database.js';
 import type { PermissionSet } from '../access-control/permission-set.js';

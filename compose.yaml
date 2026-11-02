@@ -1,7 +1,7 @@
 # Local development infrastructure.
 #   pnpm infra:up        start postgres, redis and mailpit
 #   docker compose --profile app up --build    also run the api and web containers
-name: shikkhacore
+name: eduflow
 
 services:
   postgres:
@@ -10,18 +10,18 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres}
-      SHIKKHACORE_OWNER_PASSWORD: ${SHIKKHACORE_OWNER_PASSWORD:-owner_dev_password}
-      SHIKKHACORE_APP_PASSWORD: ${SHIKKHACORE_APP_PASSWORD:-app_dev_password}
-      SHIKKHACORE_SYSTEM_PASSWORD: ${SHIKKHACORE_SYSTEM_PASSWORD:-system_dev_password}
+      EDUFLOW_OWNER_PASSWORD: ${EDUFLOW_OWNER_PASSWORD:-owner_dev_password}
+      EDUFLOW_APP_PASSWORD: ${EDUFLOW_APP_PASSWORD:-app_dev_password}
+      EDUFLOW_SYSTEM_PASSWORD: ${EDUFLOW_SYSTEM_PASSWORD:-system_dev_password}
     ports:
       - '127.0.0.1:${POSTGRES_PORT:-5433}:5432'
     volumes:
       # Postgres 18 images keep data in a version-specific directory below this mount.
       - postgres-data:/var/lib/postgresql
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
-      - ./infra/postgres/sql:/opt/shikkhacore/sql:ro
+      - ./infra/postgres/sql:/opt/eduflow/sql:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d shikkhacore']
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d eduflow']
       interval: 5s
       timeout: 5s
       retries: 20
@@ -63,7 +63,7 @@ services:
       dockerfile: infra/docker/api.Dockerfile
       target: migrate
     environment:
-      MIGRATION_DATABASE_URL: postgresql://shikkhacore_owner:${SHIKKHACORE_OWNER_PASSWORD:-owner_dev_password}@postgres:5432/shikkhacore
+      MIGRATION_DATABASE_URL: postgresql://eduflow_owner:${EDUFLOW_OWNER_PASSWORD:-owner_dev_password}@postgres:5432/eduflow
     depends_on:
       postgres:
         condition: service_healthy
@@ -77,8 +77,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: '4000'
-      DATABASE_URL: postgresql://shikkhacore_app:${SHIKKHACORE_APP_PASSWORD:-app_dev_password}@postgres:5432/shikkhacore
-      SYSTEM_DATABASE_URL: postgresql://shikkhacore_system:${SHIKKHACORE_SYSTEM_PASSWORD:-system_dev_password}@postgres:5432/shikkhacore
+      DATABASE_URL: postgresql://eduflow_app:${EDUFLOW_APP_PASSWORD:-app_dev_password}@postgres:5432/eduflow
+      SYSTEM_DATABASE_URL: postgresql://eduflow_system:${EDUFLOW_SYSTEM_PASSWORD:-system_dev_password}@postgres:5432/eduflow
       REDIS_URL: redis://redis:6379/0
       APP_PUBLIC_URL: http://localhost:3100
       APP_BASE_DOMAIN: localhost
@@ -89,7 +89,7 @@ services:
       SESSION_COOKIE_NAME: sc_session
       MAIL_TRANSPORT: smtp
       SMTP_URL: smtp://mailpit:1025
-      MAIL_FROM: ShikkhaCore <no-reply@shikkhacore.local>
+      MAIL_FROM: EduFlow <no-reply@eduflow.local>
     depends_on:
       migrate:
         condition: service_completed_successfully

@@ -1,4 +1,4 @@
-import type { SchoolStatus } from '@shikkhacore/types';
+import type { SchoolStatus } from '@eduflow/types';
 
 /** Public facts about the school a host belongs to. */
 export interface HostSchool {

@@ -1,4 +1,4 @@
-import { schoolSubdomainUrl } from '@shikkhacore/types';
+import { schoolSubdomainUrl } from '@eduflow/types';
 
 import type { AppConfig } from '../../config/env.js';
 import type { HostContext } from './tenancy.types.js';

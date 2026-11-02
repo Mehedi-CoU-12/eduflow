@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "ShikkhaCore Next.js",
+  "display": "EduFlow Next.js",
   "extends": "./base.json",
   "compilerOptions": {
     "target": "es2022",

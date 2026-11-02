@@ -7,7 +7,7 @@ import {
   type ExceptionFilter,
 } from '@nestjs/common';
 import { ThrottlerException } from '@nestjs/throttler';
-import type { ApiFailure, ErrorCode } from '@shikkhacore/types';
+import type { ApiFailure, ErrorCode } from '@eduflow/types';
 import type { Request, Response } from 'express';
 
 import { Prisma } from '../../generated/prisma/client.js';

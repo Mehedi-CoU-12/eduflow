@@ -5,7 +5,7 @@ import {
   type SchoolDto,
   type SchoolStatus,
   type TenantContextDto,
-} from '@shikkhacore/types';
+} from '@eduflow/types';
 
 import type { AppConfig } from '../../config/env.js';
 import { schoolUrl } from './school-urls.js';
