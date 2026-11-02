@@ -1,28 +1,38 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   isSchoolPermissionKey,
+  type InviteMemberInput,
   type ListMembersQuery,
   type MemberDto,
   type SchoolPermissionKey,
   type UpdateMemberRolesInput,
-} from '@shikkhacore/types';
+  type UpdateMemberStatusInput,
+} from '@eduflow/types';
 
 import { AppError } from '../../common/errors/app-error.js';
 import { encodeCursor } from '../../common/http/cursor.js';
 import { Page } from '../../common/http/page.js';
 import type { RequestMeta } from '../../common/http/request-context.js';
+import { APP_CONFIG } from '../../config/config.module.js';
+import type { AppConfig } from '../../config/env.js';
 import { AppDatabase } from '../../infrastructure/database/app-database.js';
+import { SystemDatabase } from '../../infrastructure/database/system-database.js';
+import { MailService } from '../../infrastructure/mail/mail.service.js';
 import { PermissionSet, type Grant } from '../access-control/permission-set.js';
 import { AuditService } from '../audit/audit.service.js';
+import { schoolUrl } from '../tenancy/school-urls.js';
 import type { TenantContext } from '../tenancy/tenant-context.js';
-import { MembersRepository, type MemberRow } from './members.repository.js';
+import { MEMBER_SELECT, MembersRepository, type MemberRow } from './members.repository.js';
 
 @Injectable()
 export class MembersService {
   constructor(
     private readonly db: AppDatabase,
+    private readonly system: SystemDatabase,
+    private readonly mail: MailService,
     private readonly members: MembersRepository,
     private readonly audit: AuditService,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
   list(tenant: TenantContext, query: ListMembersQuery): Promise<Page<MemberDto>> {
@@ -103,6 +113,138 @@ export class MembersService {
       );
       return toMemberDto(updated);
     });
+  }
+
+  /** Invites a new or existing user to the school with the given roles. */
+  async invite(tenant: TenantContext, input: InviteMemberInput, meta: RequestMeta): Promise<MemberDto> {
+    const roles = await this.db.withTenant(tenant, (tx) =>
+      this.members.findAssignableRoles(tx, input.roleIds),
+    );
+    const byId = new Map(roles.map((r) => [r.id, r]));
+    if (input.roleIds.some((id) => !byId.has(id))) {
+      throw AppError.notFound('ROLE_NOT_FOUND', 'One or more roles do not exist in this school');
+    }
+
+    const assignedGrants = PermissionSet.fromGrants(
+      input.roleIds.flatMap((id) => schoolGrants(byId.get(id)?.grants ?? [])),
+    );
+    if (!tenant.permissions.covers(assignedGrants)) {
+      throw AppError.forbidden('ROLE_ASSIGNMENT_FORBIDDEN', 'You can only assign roles whose permissions you hold yourself');
+    }
+
+    // Find or create global user record
+    const user = await this.system.client.user.upsert({
+      where: { email: input.email },
+      create: { email: input.email, name: input.name },
+      update: {},
+      select: { id: true, name: true, email: true, locale: true },
+    });
+
+    const member = await this.db.withTenant(tenant, async (tx) => {
+      const existing = await tx.db.schoolMembership.findUnique({
+        where: { schoolId_userId: { schoolId: tx.schoolId, userId: user.id } },
+        select: { id: true, status: true },
+      });
+      if (existing && existing.status !== 'removed') {
+        throw AppError.conflict('MEMBER_EXISTS', 'This user is already a member of the school');
+      }
+
+      let created: { id: string };
+      if (existing) {
+        created = await tx.db.schoolMembership.update({
+          where: { id: existing.id },
+          data: { status: 'invited' },
+          select: { id: true },
+        });
+        await this.members.replaceRoles(tx, existing.id, input.roleIds);
+      } else {
+        created = await tx.db.schoolMembership.create({
+          data: { schoolId: tx.schoolId, userId: user.id, status: 'invited' },
+          select: { id: true },
+        });
+        await tx.db.membershipRole.createMany({
+          data: input.roleIds.map((roleId) => ({ membershipId: created.id, roleId, schoolId: tx.schoolId })),
+        });
+      }
+
+      const fresh = await tx.db.schoolMembership.findUniqueOrThrow({
+        where: { id: created.id },
+        select: MEMBER_SELECT,
+      });
+
+      await this.audit.record(
+        tx,
+        {
+          action: 'membership.invited',
+          entityType: 'school_membership',
+          entityId: created.id,
+          after: { email: user.email, roles: input.roleIds },
+          metadata: { userId: user.id },
+        },
+        meta,
+      );
+
+      return fresh;
+    });
+
+    // Send invitation email in the background
+    await this.mail.send({
+      to: user.email,
+      template: 'schoolInvite',
+      locale: user.locale ?? tenant.school.defaultLocale,
+      name: user.name,
+      url: schoolUrl(this.config, tenant.school.slug),
+    });
+
+    return toMemberDto(member);
+  }
+
+  /** Suspends or reactivates a school membership. */
+  async updateStatus(
+    tenant: TenantContext,
+    membershipId: string,
+    input: UpdateMemberStatusInput,
+    meta: RequestMeta,
+  ): Promise<MemberDto> {
+    return this.db.withTenant(tenant, async (tx) => {
+      await this.members.lockRoleChanges(tx);
+
+      const member = await this.members.findById(tx, membershipId);
+      if (!member) throw memberNotFound();
+
+      if (member.status === input.status) return toMemberDto(member);
+
+      const hasOwnerRole = member.roles.some(({ role }) => role.key === 'school_owner');
+      if (hasOwnerRole && input.status !== 'active' && (await this.members.countActiveOwners(tx)) <= 1) {
+        throw AppError.conflict('LAST_OWNER_REQUIRED', 'A school must keep at least one active School Owner');
+      }
+
+      const updated = await tx.db.schoolMembership.update({
+        where: { id: membershipId, schoolId: tx.schoolId },
+        data: { status: input.status },
+        select: MEMBER_SELECT,
+      });
+
+      await this.audit.record(
+        tx,
+        {
+          action: 'membership.status_updated',
+          entityType: 'school_membership',
+          entityId: membershipId,
+          before: { status: member.status },
+          after: { status: updated.status },
+          metadata: { userId: member.user.id },
+        },
+        meta,
+      );
+
+      return toMemberDto(updated);
+    });
+  }
+
+  /** Soft-removes a school member. */
+  remove(tenant: TenantContext, membershipId: string, meta: RequestMeta): Promise<MemberDto> {
+    return this.updateStatus(tenant, membershipId, { status: 'removed' }, meta);
   }
 }
 
