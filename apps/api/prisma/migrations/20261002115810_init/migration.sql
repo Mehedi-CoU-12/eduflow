@@ -322,9 +322,9 @@ ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_actor_user_id_fkey" FOREIGN 
 -- Prisma does not model any of this. See docs/multi-tenancy.md and docs/database.md.
 --
 -- Database roles (created by infra/postgres/sql/001_roles.sql):
---   shikkhacore_owner   owns every object, runs migrations, never used by the API
---   shikkhacore_app     normal API requests; row level security applies
---   shikkhacore_system  trusted code paths; full access through explicit policies
+--   eduflow_owner   owns every object, runs migrations, never used by the API
+--   eduflow_app     normal API requests; row level security applies
+--   eduflow_system  trusted code paths; full access through explicit policies
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -332,7 +332,7 @@ ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_actor_user_id_fkey" FOREIGN 
 -- -----------------------------------------------------------------------------
 
 CREATE SCHEMA app;
-GRANT USAGE ON SCHEMA app TO shikkhacore_app, shikkhacore_system;
+GRANT USAGE ON SCHEMA app TO eduflow_app, eduflow_system;
 
 -- The API sets these per transaction with set_config('app.school_id', ..., true), so a
 -- pooled connection never carries one request's context into the next. Unset or empty
@@ -347,24 +347,24 @@ CREATE FUNCTION app.current_user_id() RETURNS uuid
 
 REVOKE ALL ON FUNCTION app.current_school_id(), app.current_user_id() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app.current_school_id(), app.current_user_id()
-  TO shikkhacore_app, shikkhacore_system;
+  TO eduflow_app, eduflow_system;
 
 -- Standard isolation for a table with a NOT NULL school_id column. Every new
 -- tenant-owned table should call this in its migration, then grant privileges:
 --   SELECT app.enable_tenant_rls('students');
---   GRANT SELECT, INSERT, UPDATE ON students TO shikkhacore_app, shikkhacore_system;
+--   GRANT SELECT, INSERT, UPDATE ON students TO eduflow_app, eduflow_system;
 CREATE FUNCTION app.enable_tenant_rls(p_table regclass) RETURNS void
   LANGUAGE plpgsql
   AS $$
 BEGIN
   EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', p_table);
   EXECUTE format(
-    'CREATE POLICY tenant_isolation ON %s AS PERMISSIVE FOR ALL TO shikkhacore_app '
+    'CREATE POLICY tenant_isolation ON %s AS PERMISSIVE FOR ALL TO eduflow_app '
     'USING (school_id = (SELECT app.current_school_id())) '
     'WITH CHECK (school_id = (SELECT app.current_school_id()))',
     p_table);
   EXECUTE format(
-    'CREATE POLICY system_access ON %s AS PERMISSIVE FOR ALL TO shikkhacore_system '
+    'CREATE POLICY system_access ON %s AS PERMISSIVE FOR ALL TO eduflow_system '
     'USING (true) WITH CHECK (true)',
     p_table);
 END
@@ -380,7 +380,7 @@ REVOKE ALL ON FUNCTION app.enable_tenant_rls(regclass) FROM PUBLIC;
 -- see that school's members. Only the profile columns are writable, and only by the
 -- user themself. Sign-up and invitations write through the system role.
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-CREATE POLICY users_visible ON users FOR SELECT TO shikkhacore_app
+CREATE POLICY users_visible ON users FOR SELECT TO eduflow_app
   USING (
     id = (SELECT app.current_user_id())
     OR EXISTS (
@@ -389,31 +389,31 @@ CREATE POLICY users_visible ON users FOR SELECT TO shikkhacore_app
         AND m.school_id = (SELECT app.current_school_id())
     )
   );
-CREATE POLICY users_update_self ON users FOR UPDATE TO shikkhacore_app
+CREATE POLICY users_update_self ON users FOR UPDATE TO eduflow_app
   USING (id = (SELECT app.current_user_id()))
   WITH CHECK (id = (SELECT app.current_user_id()));
-CREATE POLICY system_access ON users FOR ALL TO shikkhacore_system USING (true) WITH CHECK (true);
-GRANT SELECT ON users TO shikkhacore_app;
-GRANT UPDATE (name, phone, avatar_url, locale, updated_at) ON users TO shikkhacore_app;
-GRANT SELECT, INSERT, UPDATE ON users TO shikkhacore_system;
+CREATE POLICY system_access ON users FOR ALL TO eduflow_system USING (true) WITH CHECK (true);
+GRANT SELECT ON users TO eduflow_app;
+GRANT UPDATE (name, phone, avatar_url, locale, updated_at) ON users TO eduflow_app;
+GRANT SELECT, INSERT, UPDATE ON users TO eduflow_system;
 
 -- Secrets and sessions: the app role has no privileges at all. RLS is enabled with a
 -- system-only policy as a second barrier in case a grant is ever added by mistake.
 ALTER TABLE user_credentials ENABLE ROW LEVEL SECURITY;
-CREATE POLICY system_access ON user_credentials FOR ALL TO shikkhacore_system USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON user_credentials TO shikkhacore_system;
+CREATE POLICY system_access ON user_credentials FOR ALL TO eduflow_system USING (true) WITH CHECK (true);
+GRANT SELECT, INSERT, UPDATE, DELETE ON user_credentials TO eduflow_system;
 
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY system_access ON sessions FOR ALL TO shikkhacore_system USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON sessions TO shikkhacore_system;
+CREATE POLICY system_access ON sessions FOR ALL TO eduflow_system USING (true) WITH CHECK (true);
+GRANT SELECT, INSERT, UPDATE, DELETE ON sessions TO eduflow_system;
 
 ALTER TABLE auth_tokens ENABLE ROW LEVEL SECURITY;
-CREATE POLICY system_access ON auth_tokens FOR ALL TO shikkhacore_system USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON auth_tokens TO shikkhacore_system;
+CREATE POLICY system_access ON auth_tokens FOR ALL TO eduflow_system USING (true) WITH CHECK (true);
+GRANT SELECT, INSERT, UPDATE, DELETE ON auth_tokens TO eduflow_system;
 
 ALTER TABLE platform_memberships ENABLE ROW LEVEL SECURITY;
-CREATE POLICY system_access ON platform_memberships FOR ALL TO shikkhacore_system USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON platform_memberships TO shikkhacore_system;
+CREATE POLICY system_access ON platform_memberships FOR ALL TO eduflow_system USING (true) WITH CHECK (true);
+GRANT SELECT, INSERT, UPDATE, DELETE ON platform_memberships TO eduflow_system;
 
 -- -----------------------------------------------------------------------------
 -- Tenancy tables
@@ -424,7 +424,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON platform_memberships TO shikkhacore_syst
 -- A new school is inserted inside a context set to its own (server-generated) id.
 -- Schools are archived, never deleted.
 ALTER TABLE schools ENABLE ROW LEVEL SECURITY;
-CREATE POLICY schools_visible ON schools FOR SELECT TO shikkhacore_app
+CREATE POLICY schools_visible ON schools FOR SELECT TO eduflow_app
   USING (
     id = (SELECT app.current_school_id())
     OR (
@@ -435,51 +435,51 @@ CREATE POLICY schools_visible ON schools FOR SELECT TO shikkhacore_app
       )
     )
   );
-CREATE POLICY schools_insert ON schools FOR INSERT TO shikkhacore_app
+CREATE POLICY schools_insert ON schools FOR INSERT TO eduflow_app
   WITH CHECK (id = (SELECT app.current_school_id()));
-CREATE POLICY schools_update ON schools FOR UPDATE TO shikkhacore_app
+CREATE POLICY schools_update ON schools FOR UPDATE TO eduflow_app
   USING (id = (SELECT app.current_school_id()))
   WITH CHECK (id = (SELECT app.current_school_id()));
-CREATE POLICY system_access ON schools FOR ALL TO shikkhacore_system USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE ON schools TO shikkhacore_app, shikkhacore_system;
+CREATE POLICY system_access ON schools FOR ALL TO eduflow_system USING (true) WITH CHECK (true);
+GRANT SELECT, INSERT, UPDATE ON schools TO eduflow_app, eduflow_system;
 
 SELECT app.enable_tenant_rls('school_domains');
-GRANT SELECT, INSERT, UPDATE, DELETE ON school_domains TO shikkhacore_app, shikkhacore_system;
+GRANT SELECT, INSERT, UPDATE, DELETE ON school_domains TO eduflow_app, eduflow_system;
 
 -- school_memberships: tenant isolation, plus a user's own memberships when no school
 -- is selected (the school picker). Memberships are never deleted by the app.
 SELECT app.enable_tenant_rls('school_memberships');
-CREATE POLICY own_memberships ON school_memberships FOR SELECT TO shikkhacore_app
+CREATE POLICY own_memberships ON school_memberships FOR SELECT TO eduflow_app
   USING (
     (SELECT app.current_school_id()) IS NULL
     AND user_id = (SELECT app.current_user_id())
   );
-GRANT SELECT, INSERT, UPDATE ON school_memberships TO shikkhacore_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON school_memberships TO shikkhacore_system;
+GRANT SELECT, INSERT, UPDATE ON school_memberships TO eduflow_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON school_memberships TO eduflow_system;
 
 SELECT app.enable_tenant_rls('membership_roles');
-CREATE POLICY own_membership_roles ON membership_roles FOR SELECT TO shikkhacore_app
+CREATE POLICY own_membership_roles ON membership_roles FOR SELECT TO eduflow_app
   USING (
     (SELECT app.current_school_id()) IS NULL
     AND membership_id IN (
       SELECT m.id FROM school_memberships m WHERE m.user_id = (SELECT app.current_user_id())
     )
   );
-GRANT SELECT, INSERT, DELETE ON membership_roles TO shikkhacore_app, shikkhacore_system;
+GRANT SELECT, INSERT, DELETE ON membership_roles TO eduflow_app, eduflow_system;
 
 -- -----------------------------------------------------------------------------
 -- Access control tables
 -- -----------------------------------------------------------------------------
 
 -- permissions: global read-only catalog for the app role.
-GRANT SELECT ON permissions TO shikkhacore_app;
-GRANT SELECT, INSERT, UPDATE ON permissions TO shikkhacore_system;
+GRANT SELECT ON permissions TO eduflow_app;
+GRANT SELECT, INSERT, UPDATE ON permissions TO eduflow_system;
 
 -- roles: school-realm system roles are visible everywhere; custom roles only inside
 -- their school (or, on the account host, to that school's active members). The app
 -- role can create and change custom roles of the current school only.
 ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY roles_visible ON roles FOR SELECT TO shikkhacore_app
+CREATE POLICY roles_visible ON roles FOR SELECT TO eduflow_app
   USING (
     (school_id IS NULL AND realm = 'school')
     OR school_id = (SELECT app.current_school_id())
@@ -491,27 +491,27 @@ CREATE POLICY roles_visible ON roles FOR SELECT TO shikkhacore_app
       )
     )
   );
-CREATE POLICY custom_roles_insert ON roles FOR INSERT TO shikkhacore_app
+CREATE POLICY custom_roles_insert ON roles FOR INSERT TO eduflow_app
   WITH CHECK (school_id = (SELECT app.current_school_id()) AND realm = 'school');
-CREATE POLICY custom_roles_update ON roles FOR UPDATE TO shikkhacore_app
+CREATE POLICY custom_roles_update ON roles FOR UPDATE TO eduflow_app
   USING (school_id = (SELECT app.current_school_id()))
   WITH CHECK (school_id = (SELECT app.current_school_id()) AND realm = 'school');
-CREATE POLICY custom_roles_delete ON roles FOR DELETE TO shikkhacore_app
+CREATE POLICY custom_roles_delete ON roles FOR DELETE TO eduflow_app
   USING (school_id = (SELECT app.current_school_id()));
-CREATE POLICY system_access ON roles FOR ALL TO shikkhacore_system USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON roles TO shikkhacore_app, shikkhacore_system;
+CREATE POLICY system_access ON roles FOR ALL TO eduflow_system USING (true) WITH CHECK (true);
+GRANT SELECT, INSERT, UPDATE, DELETE ON roles TO eduflow_app, eduflow_system;
 
 -- role_permissions: visible when the role is visible (the subquery is itself filtered
 -- by the roles policies); writable only for the current school's custom roles.
 ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY grants_visible ON role_permissions FOR SELECT TO shikkhacore_app
+CREATE POLICY grants_visible ON role_permissions FOR SELECT TO eduflow_app
   USING (EXISTS (SELECT 1 FROM roles r WHERE r.id = role_permissions.role_id));
-CREATE POLICY custom_grants_insert ON role_permissions FOR INSERT TO shikkhacore_app
+CREATE POLICY custom_grants_insert ON role_permissions FOR INSERT TO eduflow_app
   WITH CHECK (EXISTS (
     SELECT 1 FROM roles r
     WHERE r.id = role_permissions.role_id AND r.school_id = (SELECT app.current_school_id())
   ));
-CREATE POLICY custom_grants_update ON role_permissions FOR UPDATE TO shikkhacore_app
+CREATE POLICY custom_grants_update ON role_permissions FOR UPDATE TO eduflow_app
   USING (EXISTS (
     SELECT 1 FROM roles r
     WHERE r.id = role_permissions.role_id AND r.school_id = (SELECT app.current_school_id())
@@ -520,29 +520,29 @@ CREATE POLICY custom_grants_update ON role_permissions FOR UPDATE TO shikkhacore
     SELECT 1 FROM roles r
     WHERE r.id = role_permissions.role_id AND r.school_id = (SELECT app.current_school_id())
   ));
-CREATE POLICY custom_grants_delete ON role_permissions FOR DELETE TO shikkhacore_app
+CREATE POLICY custom_grants_delete ON role_permissions FOR DELETE TO eduflow_app
   USING (EXISTS (
     SELECT 1 FROM roles r
     WHERE r.id = role_permissions.role_id AND r.school_id = (SELECT app.current_school_id())
   ));
-CREATE POLICY system_access ON role_permissions FOR ALL TO shikkhacore_system USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON role_permissions TO shikkhacore_app, shikkhacore_system;
+CREATE POLICY system_access ON role_permissions FOR ALL TO eduflow_system USING (true) WITH CHECK (true);
+GRANT SELECT, INSERT, UPDATE, DELETE ON role_permissions TO eduflow_app, eduflow_system;
 
 -- -----------------------------------------------------------------------------
 -- Audit log: append-only for every role, including the owner
 -- -----------------------------------------------------------------------------
 
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_audit_select ON audit_logs FOR SELECT TO shikkhacore_app
+CREATE POLICY tenant_audit_select ON audit_logs FOR SELECT TO eduflow_app
   USING (school_id = (SELECT app.current_school_id()));
 -- The app role can only record events for the current school, as the current user.
-CREATE POLICY tenant_audit_insert ON audit_logs FOR INSERT TO shikkhacore_app
+CREATE POLICY tenant_audit_insert ON audit_logs FOR INSERT TO eduflow_app
   WITH CHECK (
     school_id = (SELECT app.current_school_id())
     AND actor_user_id IS NOT DISTINCT FROM (SELECT app.current_user_id())
   );
-CREATE POLICY system_access ON audit_logs FOR ALL TO shikkhacore_system USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT ON audit_logs TO shikkhacore_app, shikkhacore_system;
+CREATE POLICY system_access ON audit_logs FOR ALL TO eduflow_system USING (true) WITH CHECK (true);
+GRANT SELECT, INSERT ON audit_logs TO eduflow_app, eduflow_system;
 
 CREATE FUNCTION app.reject_audit_log_change() RETURNS trigger
   LANGUAGE plpgsql
