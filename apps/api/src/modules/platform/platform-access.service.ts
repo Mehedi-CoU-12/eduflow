@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { isPlatformPermissionKey, type PlatformPermissionKey } from '@shikkhacore/types';
+import { isPlatformPermissionKey, type PlatformPermissionKey } from '@eduflow/types';
 
 import { SystemDatabase } from '../../infrastructure/database/system-database.js';
 import { PermissionSet, type Grant } from '../access-control/permission-set.js';
