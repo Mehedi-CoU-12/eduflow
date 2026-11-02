@@ -1,4 +1,4 @@
-import type { CursorPageMeta } from '@shikkhacore/types';
+import type { CursorPageMeta } from '@eduflow/types';
 
 /**
  * Return a Page from a controller to get `{ success: true, data: items, meta: { nextCursor, limit } }`.
