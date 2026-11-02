@@ -1,4 +1,4 @@
-import { nest } from '@shikkhacore/eslint-config/nest';
+import { nest } from '@eduflow/eslint-config/nest';
 import { defineConfig } from 'eslint/config';
 
 export default defineConfig(nest, {
