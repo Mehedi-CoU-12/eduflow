@@ -38,7 +38,10 @@ export const ERROR_CODES = [
 
   // Resources
   'MEMBER_NOT_FOUND',
+  'MEMBER_EXISTS',
   'ROLE_NOT_FOUND',
+  'ROLE_EXISTS',
+  'ROLE_IN_USE',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
