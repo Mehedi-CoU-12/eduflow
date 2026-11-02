@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "ShikkhaCore ESM library (consumed by Node and bundlers)",
+  "display": "EduFlow ESM library (consumed by Node and bundlers)",
   "extends": "./base.json",
   "compilerOptions": {
     "declaration": true,
