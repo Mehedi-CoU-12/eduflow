@@ -92,7 +92,7 @@ async function main(): Promise<void> {
   const config = loadConfig();
   if (config.env === 'production') throw new Error('Refusing to seed a production environment');
 
-  const db = createPrismaClient({ connectionString: config.database.systemUrl, poolMax: 4, applicationName: 'shikkhacore-seed' });
+  const db = createPrismaClient({ connectionString: config.database.systemUrl, poolMax: 4, applicationName: 'eduflow-seed' });
   try {
     const sync = await syncAccessControl(db);
     console.log(`Access control: ${sync.permissions} permissions, ${sync.roles} system roles`);
@@ -116,10 +116,10 @@ async function main(): Promise<void> {
     }
 
     console.log(`\nSeeded. Every account's password is: ${SEED_PASSWORD}`);
-    console.log('  Platform admin  http://admin.localhost:3100     owner@shikkhacore.test');
+    console.log('  Platform admin  http://admin.localhost:3100     owner@eduflow.test');
     console.log('  Greenfield      http://greenfield.localhost:3100 admin@greenfield.test, teacher01@greenfield.test');
     console.log('  Riverside       http://riverside.localhost:3100  admin@riverside.test');
-    console.log('  Both schools    shared.teacher@shikkhacore.test');
+    console.log('  Both schools    shared.teacher@eduflow.test');
     console.log('  Account host    http://localhost:3100           any of the above');
   } finally {
     await db.$disconnect();
