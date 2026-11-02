@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { CreateSchoolInput, SchoolDto } from '@shikkhacore/types';
+import type { CreateSchoolInput, SchoolDto, UpdateSchoolInput } from '@eduflow/types';
 
 import { AppError } from '../../common/errors/app-error.js';
 import type { RequestMeta } from '../../common/http/request-context.js';
@@ -81,6 +81,27 @@ export class SchoolsService {
     return this.db.withTenant(tenant, async (tx) => {
       const school = await tx.db.school.findUniqueOrThrow({ where: { id: tx.schoolId }, select: SCHOOL_SELECT });
       return toSchoolDto(this.config, school);
+    });
+  }
+
+  /** Updates the school profile and settings. */
+  update(tenant: TenantContext, input: UpdateSchoolInput, meta: RequestMeta): Promise<SchoolDto> {
+    return this.db.withTenant(tenant, async (tx) => {
+      const before = await tx.db.school.findUniqueOrThrow({ where: { id: tx.schoolId }, select: SCHOOL_SELECT });
+      const updated = await tx.db.school.update({
+        where: { id: tx.schoolId },
+        data: input,
+        select: SCHOOL_SELECT,
+      });
+
+      await this.audit.record(
+        tx,
+        { action: 'school.updated', entityType: 'school', entityId: tx.schoolId, before, after: updated },
+        meta,
+      );
+
+      this.hosts.invalidate();
+      return toSchoolDto(this.config, updated);
     });
   }
 }
