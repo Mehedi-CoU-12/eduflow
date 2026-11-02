@@ -13,7 +13,7 @@ import { createPrismaClient, type PrismaClient } from './prisma.js';
  *   - platform administration
  *   - syncing the permission catalog, seeding and auditing user-level events
  *
- * It connects as `shikkhacore_system`, which RLS lets through via explicit
+ * It connects as `eduflow_system`, which RLS lets through via explicit
  * `system_access` policies. ESLint (no-restricted-imports in apps/api/eslint.config.js)
  * blocks importing this class anywhere else. Ordinary school features must use
  * AppDatabase.withTenant().
@@ -26,7 +26,7 @@ export class SystemDatabase implements OnModuleInit, OnModuleDestroy {
     this.client = createPrismaClient({
       connectionString: config.database.systemUrl,
       poolMax: Math.max(2, Math.ceil(config.database.poolMax / 2)),
-      applicationName: 'shikkhacore-api-system',
+      applicationName: 'eduflow-api-system',
     });
   }
 
