@@ -16,4 +16,4 @@ app.useLogger(app.get(Logger));
 configureApp(app, config);
 
 await app.listen(config.port);
-app.get(Logger).log(`ShikkhaCore API listening on http://localhost:${config.port}/api/v1`, 'Bootstrap');
+app.get(Logger).log(`EduFlow API listening on http://localhost:${config.port}/api/v1`, 'Bootstrap');
