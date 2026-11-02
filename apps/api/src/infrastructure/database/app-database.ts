@@ -32,7 +32,7 @@ export interface TxOptions {
 }
 
 /**
- * The database client for normal requests. It connects as `shikkhacore_app`, which is
+ * The database client for normal requests. It connects as `eduflow_app`, which is
  * subject to row level security, and only exposes queries inside a transaction whose
  * tenant context has been set — there is deliberately no way to run a query without one.
  *
@@ -47,7 +47,7 @@ export class AppDatabase implements OnModuleInit, OnModuleDestroy {
     this.client = createPrismaClient({
       connectionString: config.database.appUrl,
       poolMax: config.database.poolMax,
-      applicationName: 'shikkhacore-api',
+      applicationName: 'eduflow-api',
     });
   }
 
