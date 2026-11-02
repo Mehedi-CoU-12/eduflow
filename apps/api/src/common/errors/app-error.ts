@@ -18,7 +18,15 @@ export class AppError extends HttpException {
   }
 
   static validation(details: ValidationIssue[]): AppError {
-    return new AppError('VALIDATION_FAILED', 'The request is invalid', HttpStatus.BAD_REQUEST, details);
+    const summary = details
+      .map((d) => (d.path.length > 0 ? `${d.path.join('.')}: ${d.message}` : d.message))
+      .join('; ');
+    return new AppError(
+      'VALIDATION_FAILED',
+      summary ? `Validation failed: ${summary}` : 'The request is invalid',
+      HttpStatus.BAD_REQUEST,
+      details,
+    );
   }
 
   static badRequest(code: ErrorCode, message: string, details?: AppErrorDetails): AppError {
