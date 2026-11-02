@@ -47,3 +47,16 @@ export const createSchoolSchema = z.object({
   defaultLocale: localeSchema,
 });
 export type CreateSchoolInput = z.infer<typeof createSchoolSchema>;
+
+export const updateSchoolSchema = z.object({
+  name: z.string().trim().min(2).max(160).optional(),
+  countryCode: countryCodeSchema.optional(),
+  timezone: timeZoneSchema.optional(),
+  currencyCode: currencyCodeSchema.optional(),
+  defaultLocale: localeSchema.optional(),
+  email: z.string().trim().max(254).pipe(z.email()).nullable().optional(),
+  phone: z.string().trim().max(32).nullable().optional(),
+  website: z.string().trim().max(255).pipe(z.url()).nullable().optional(),
+  address: z.string().trim().max(500).nullable().optional(),
+});
+export type UpdateSchoolInput = z.infer<typeof updateSchoolSchema>;
