@@ -3,15 +3,15 @@ import { describe, expect, it } from '@jest/globals';
 import { classifyHost, normalizeHostname, schoolSubdomainUrl, type HostConfig } from './host.js';
 
 const config: HostConfig = {
-  baseDomain: 'shikkhacore.com',
-  rootHosts: ['app.shikkhacore.com'],
-  platformHosts: ['admin.shikkhacore.com'],
+  baseDomain: 'eduflow.com',
+  rootHosts: ['app.eduflow.com'],
+  platformHosts: ['admin.eduflow.com'],
 };
 
 describe('normalizeHostname', () => {
   it('lowercases and strips the port and trailing dot', () => {
-    expect(normalizeHostname('Greenfield.ShikkhaCore.com:3100')).toBe('greenfield.shikkhacore.com');
-    expect(normalizeHostname('greenfield.shikkhacore.com.')).toBe('greenfield.shikkhacore.com');
+    expect(normalizeHostname('Greenfield.EduFlow.com:3100')).toBe('greenfield.eduflow.com');
+    expect(normalizeHostname('greenfield.eduflow.com.')).toBe('greenfield.eduflow.com');
   });
 
   it('rejects IP literals, empty values and malformed hosts', () => {
@@ -27,23 +27,23 @@ describe('normalizeHostname', () => {
 
 describe('classifyHost', () => {
   it('recognises platform and root hosts', () => {
-    expect(classifyHost('admin.shikkhacore.com', config).kind).toBe('platform');
-    expect(classifyHost('app.shikkhacore.com:443', config).kind).toBe('root');
+    expect(classifyHost('admin.eduflow.com', config).kind).toBe('platform');
+    expect(classifyHost('app.eduflow.com:443', config).kind).toBe('root');
   });
 
   it('extracts the school slug from a single-label subdomain', () => {
-    expect(classifyHost('greenfield.shikkhacore.com', config)).toEqual({
+    expect(classifyHost('greenfield.eduflow.com', config)).toEqual({
       kind: 'subdomain',
-      hostname: 'greenfield.shikkhacore.com',
+      hostname: 'greenfield.eduflow.com',
       slug: 'greenfield',
     });
   });
 
   it('never treats reserved labels, nested subdomains or the bare domain as schools', () => {
-    expect(classifyHost('www.shikkhacore.com', config).kind).toBe('invalid');
-    expect(classifyHost('api.shikkhacore.com', config).kind).toBe('invalid');
-    expect(classifyHost('a.greenfield.shikkhacore.com', config).kind).toBe('invalid');
-    expect(classifyHost('shikkhacore.com', config).kind).toBe('invalid');
+    expect(classifyHost('www.eduflow.com', config).kind).toBe('invalid');
+    expect(classifyHost('api.eduflow.com', config).kind).toBe('invalid');
+    expect(classifyHost('a.greenfield.eduflow.com', config).kind).toBe('invalid');
+    expect(classifyHost('eduflow.com', config).kind).toBe('invalid');
   });
 
   it('treats any other valid hostname as a potential custom domain', () => {
@@ -66,8 +66,8 @@ describe('schoolSubdomainUrl', () => {
     expect(schoolSubdomainUrl('http://localhost:3100', 'localhost', 'greenfield')).toBe(
       'http://greenfield.localhost:3100',
     );
-    expect(schoolSubdomainUrl('https://app.shikkhacore.com', 'shikkhacore.com', 'riverside')).toBe(
-      'https://riverside.shikkhacore.com',
+    expect(schoolSubdomainUrl('https://app.eduflow.com', 'eduflow.com', 'riverside')).toBe(
+      'https://riverside.eduflow.com',
     );
   });
 });
