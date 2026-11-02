@@ -1,5 +1,5 @@
 /**
- * School slugs double as subdomains (`<slug>.shikkhacore.com`), so they follow DNS label
+ * School slugs double as subdomains (`<slug>.eduflow.com`), so they follow DNS label
  * rules: 3–40 lowercase letters, digits and single hyphens, starting and ending with a
  * letter or digit. The database enforces the same pattern with a CHECK constraint.
  */
@@ -31,7 +31,7 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   'ns2',
   'platform',
   'root',
-  'shikkhacore',
+  'eduflow',
   'smtp',
   'staging',
   'static',
