@@ -16,4 +16,4 @@ const config = loadConfig({ ...process.env, WORKER_ENABLED: 'true' });
 const app = await NestFactory.createApplicationContext(AppModule.forRoot(config), { bufferLogs: true });
 app.useLogger(app.get(Logger));
 app.enableShutdownHooks();
-app.get(Logger).log('ShikkhaCore worker started', 'Bootstrap');
+app.get(Logger).log('EduFlow worker started', 'Bootstrap');
