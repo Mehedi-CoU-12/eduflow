@@ -1,4 +1,4 @@
-import type { PermissionScope, SchoolPermissionKey, SchoolSystemRoleKey } from '@shikkhacore/types';
+import type { PermissionScope, SchoolPermissionKey, SchoolSystemRoleKey } from '@eduflow/types';
 
 /**
  * Development seed dataset. Two schools with completely separate people, so that any
@@ -60,10 +60,10 @@ function numbered(prefix: string, domain: string, count: number, offset: number,
   }));
 }
 
-export const PLATFORM_OWNER = { email: 'owner@shikkhacore.test', name: 'Platform Owner' } as const;
+export const PLATFORM_OWNER = { email: 'owner@eduflow.test', name: 'Platform Owner' } as const;
 
 /** Works at both schools: a teacher at Greenfield, a teacher and a parent at Riverside. */
-export const SHARED_TEACHER = { email: 'shared.teacher@shikkhacore.test', name: 'Rashed Chowdhury' } as const;
+export const SHARED_TEACHER = { email: 'shared.teacher@eduflow.test', name: 'Rashed Chowdhury' } as const;
 
 const greenfieldTeachers = numbered('teacher', 'greenfield.test', 20, 0, ['teacher']);
 // One teacher also coordinates exams through a custom role.
