@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useSession } from '@/lib/session';
-import { GraduationCap, LogOut, Shield, School, User, Settings, Users, BookOpen, Clock } from 'lucide-react';
+import { GraduationCap, LogOut, Shield, School, Settings, Users, Clock, BookOpen } from 'lucide-react';
 
 export function Navbar() {
   const { session, publicTenant, loading, logout } = useSession();
@@ -50,6 +50,13 @@ export function Navbar() {
               className="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-teal-700 rounded-md hover:bg-slate-50 transition"
             >
               Overview
+            </Link>
+            <Link
+              href="/academics"
+              className="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-teal-700 rounded-md hover:bg-slate-50 transition flex items-center gap-1.5"
+            >
+              <BookOpen className="w-4 h-4" />
+              Academics
             </Link>
             <Link
               href="/members"
