@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '@/lib/session';
 import { apiFetch } from '@/lib/api';
 import type { MyMembershipDto, PlatformOverviewDto, PlatformSchoolDto } from '@eduflow/types';
 import {
-  GraduationCap,
   Shield,
   School,
   ArrowRight,
@@ -15,9 +15,9 @@ import {
   Settings,
   Clock,
   CheckCircle,
-  AlertTriangle,
   Building2,
   Sparkles,
+  BookOpen,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -51,42 +51,45 @@ export default function HomePage() {
 // PLATFORM VIEW (admin.localhost)
 // ----------------------------------------------------------------------------
 function PlatformView() {
-  const [overview, setOverview] = useState<PlatformOverviewDto | null>(null);
-  const [schools, setSchools] = useState<PlatformSchoolDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    async function loadPlatformData() {
-      try {
-        const [ov, sc] = await Promise.all([
-          apiFetch<PlatformOverviewDto>('/platform/overview'),
-          apiFetch<{ items: PlatformSchoolDto[] }>('/platform/schools?limit=25'),
-        ]);
-        setOverview(ov);
-        setSchools(sc.items);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadPlatformData();
-  }, []);
+  const { data: overview, isLoading: overviewLoading } = useQuery<PlatformOverviewDto>({
+    queryKey: ['platform', 'overview'],
+    queryFn: () => apiFetch<PlatformOverviewDto>('/platform/overview'),
+  });
 
-  const toggleStatus = async (schoolId: string, currentStatus: string) => {
-    const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
-    try {
-      await apiFetch(`/platform/schools/${schoolId}/status`, {
+  const { data: schoolsData, isLoading: schoolsLoading } = useQuery<{ items: PlatformSchoolDto[] }>({
+    queryKey: ['platform', 'schools'],
+    queryFn: () => apiFetch<{ items: PlatformSchoolDto[] }>('/platform/schools?limit=25'),
+  });
+
+  const schools = schoolsData?.items ?? [];
+  const loading = overviewLoading || schoolsLoading;
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ schoolId, status }: { schoolId: string; status: string }) =>
+      apiFetch(`/platform/schools/${schoolId}/status`, {
         method: 'PATCH',
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      setSchools((prev) =>
-        prev.map((s) => (s.id === schoolId ? { ...s, status: nextStatus as any } : s)),
-      );
-    } catch (err) {
-      alert('Failed to update status');
-    }
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['platform'] });
+    },
+    onError: () => alert('Failed to update status'),
+  });
+
+  const toggleStatus = (schoolId: string, currentStatus: string) => {
+    const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
+    toggleStatusMutation.mutate({ schoolId, status: nextStatus });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[30vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-700" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -221,60 +224,74 @@ function SchoolView() {
       </div>
 
       {/* Quick Access Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Link
-          href="/members"
-          className="group bg-white p-6 rounded-xl border border-slate-200 hover:border-teal-600/50 hover:shadow-md transition"
+          href="/academics"
+          className="group bg-white p-5 rounded-xl border border-slate-200 hover:border-teal-600/50 hover:shadow-md transition"
         >
           <div className="w-10 h-10 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center group-hover:bg-teal-700 group-hover:text-white transition">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <h3 className="font-semibold text-slate-900 mt-3 text-sm">Academics</h3>
+          <p className="text-xs text-slate-500 mt-1">Years, terms, classes, sections, and subjects.</p>
+          <div className="flex items-center gap-1 text-xs font-semibold text-teal-700 mt-3 group-hover:translate-x-1 transition-transform">
+            Manage <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+
+        <Link
+          href="/members"
+          className="group bg-white p-5 rounded-xl border border-slate-200 hover:border-teal-600/50 hover:shadow-md transition"
+        >
+          <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center group-hover:bg-blue-700 group-hover:text-white transition">
             <Users className="w-5 h-5" />
           </div>
-          <h3 className="font-semibold text-slate-900 mt-4">Members & Staff</h3>
-          <p className="text-xs text-slate-500 mt-1">Manage staff, teachers, students, and role assignments.</p>
-          <div className="flex items-center gap-1 text-xs font-semibold text-teal-700 mt-4 group-hover:translate-x-1 transition-transform">
-            View directory <ArrowRight className="w-3.5 h-3.5" />
+          <h3 className="font-semibold text-slate-900 mt-3 text-sm">Members & Staff</h3>
+          <p className="text-xs text-slate-500 mt-1">Staff, teachers, students, and invitations.</p>
+          <div className="flex items-center gap-1 text-xs font-semibold text-blue-700 mt-3 group-hover:translate-x-1 transition-transform">
+            Directory <ArrowRight className="w-3.5 h-3.5" />
           </div>
         </Link>
 
         <Link
           href="/roles"
-          className="group bg-white p-6 rounded-xl border border-slate-200 hover:border-teal-600/50 hover:shadow-md transition"
+          className="group bg-white p-5 rounded-xl border border-slate-200 hover:border-teal-600/50 hover:shadow-md transition"
         >
           <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center group-hover:bg-purple-700 group-hover:text-white transition">
             <Shield className="w-5 h-5" />
           </div>
-          <h3 className="font-semibold text-slate-900 mt-4">Roles & Permissions</h3>
-          <p className="text-xs text-slate-500 mt-1">Define custom permissions, data scopes, and privileges.</p>
-          <div className="flex items-center gap-1 text-xs font-semibold text-purple-700 mt-4 group-hover:translate-x-1 transition-transform">
-            Configure roles <ArrowRight className="w-3.5 h-3.5" />
+          <h3 className="font-semibold text-slate-900 mt-3 text-sm">Roles</h3>
+          <p className="text-xs text-slate-500 mt-1">Custom permissions and fine-grained scopes.</p>
+          <div className="flex items-center gap-1 text-xs font-semibold text-purple-700 mt-3 group-hover:translate-x-1 transition-transform">
+            Configure <ArrowRight className="w-3.5 h-3.5" />
           </div>
         </Link>
 
         <Link
           href="/audit"
-          className="group bg-white p-6 rounded-xl border border-slate-200 hover:border-teal-600/50 hover:shadow-md transition"
+          className="group bg-white p-5 rounded-xl border border-slate-200 hover:border-teal-600/50 hover:shadow-md transition"
         >
           <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center group-hover:bg-amber-700 group-hover:text-white transition">
             <Clock className="w-5 h-5" />
           </div>
-          <h3 className="font-semibold text-slate-900 mt-4">Audit Trail</h3>
-          <p className="text-xs text-slate-500 mt-1">Append-only compliance log of all changes and security events.</p>
-          <div className="flex items-center gap-1 text-xs font-semibold text-amber-700 mt-4 group-hover:translate-x-1 transition-transform">
-            Inspect activity <ArrowRight className="w-3.5 h-3.5" />
+          <h3 className="font-semibold text-slate-900 mt-3 text-sm">Audit Trail</h3>
+          <p className="text-xs text-slate-500 mt-1">Append-only compliance log of changes.</p>
+          <div className="flex items-center gap-1 text-xs font-semibold text-amber-700 mt-3 group-hover:translate-x-1 transition-transform">
+            Activity <ArrowRight className="w-3.5 h-3.5" />
           </div>
         </Link>
 
         <Link
           href="/settings"
-          className="group bg-white p-6 rounded-xl border border-slate-200 hover:border-teal-600/50 hover:shadow-md transition"
+          className="group bg-white p-5 rounded-xl border border-slate-200 hover:border-teal-600/50 hover:shadow-md transition"
         >
           <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center group-hover:bg-slate-800 group-hover:text-white transition">
             <Settings className="w-5 h-5" />
           </div>
-          <h3 className="font-semibold text-slate-900 mt-4">School Settings</h3>
-          <p className="text-xs text-slate-500 mt-1">Update profile, branding, currency, timezone, and locale.</p>
-          <div className="flex items-center gap-1 text-xs font-semibold text-slate-700 mt-4 group-hover:translate-x-1 transition-transform">
-            Edit profile <ArrowRight className="w-3.5 h-3.5" />
+          <h3 className="font-semibold text-slate-900 mt-3 text-sm">Settings</h3>
+          <p className="text-xs text-slate-500 mt-1">Profile, localization, timezone, currency.</p>
+          <div className="flex items-center gap-1 text-xs font-semibold text-slate-700 mt-3 group-hover:translate-x-1 transition-transform">
+            Settings <ArrowRight className="w-3.5 h-3.5" />
           </div>
         </Link>
       </div>
@@ -287,18 +304,12 @@ function SchoolView() {
 // ----------------------------------------------------------------------------
 function RootView() {
   const { session } = useSession();
-  const [schools, setSchools] = useState<MyMembershipDto[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (session) {
-      setLoading(true);
-      apiFetch<MyMembershipDto[]>('/me/schools')
-        .then(setSchools)
-        .catch(console.error)
-        .finally(() => setLoading(false));
-    }
-  }, [session]);
+  const { data: schools = [], isLoading: loading } = useQuery<MyMembershipDto[]>({
+    queryKey: ['mySchools'],
+    queryFn: () => apiFetch<MyMembershipDto[]>('/me/schools'),
+    enabled: !!session,
+  });
 
   if (!session) {
     return (
