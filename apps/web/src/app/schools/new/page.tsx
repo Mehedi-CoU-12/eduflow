@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { apiFetch, ApiRequestError } from '@/lib/api';
-import { COUNTRIES, type SchoolDto } from '@eduflow/types';
+import { COUNTRIES, type CreateSchoolInput, type SchoolDto } from '@eduflow/types';
 import { School, ArrowRight, AlertCircle } from 'lucide-react';
 
 export default function NewSchoolPage() {
@@ -14,7 +15,6 @@ export default function NewSchoolPage() {
   const [defaultLocale, setDefaultLocale] = useState<'en' | 'bn'>('en');
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
 
   const handleNameChange = (val: string) => {
     setName(val);
@@ -56,28 +56,16 @@ export default function NewSchoolPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setFieldErrors({});
-    setSubmitting(true);
-
-    try {
-      const created = await apiFetch<SchoolDto>('/schools', {
+  const createSchoolMutation = useMutation({
+    mutationFn: (body: CreateSchoolInput) =>
+      apiFetch<SchoolDto>('/schools', {
         method: 'POST',
-        body: JSON.stringify({
-          name: name.trim(),
-          slug: slug.trim().toLowerCase(),
-          countryCode,
-          timezone,
-          currencyCode,
-          defaultLocale,
-        }),
-      });
-
-      // Redirect directly to the school's workspace subdomain!
+        body: JSON.stringify(body),
+      }),
+    onSuccess: (created) => {
       window.location.href = created.url;
-    } catch (err: unknown) {
+    },
+    onError: (err: unknown) => {
       if (err instanceof ApiRequestError) {
         setError(err.message);
         setFieldErrors(err.fieldErrors || {});
@@ -88,9 +76,24 @@ export default function NewSchoolPage() {
         setError('Failed to create school.');
         setFieldErrors({});
       }
-    } finally {
-      setSubmitting(false);
-    }
+    },
+  });
+
+  const submitting = createSchoolMutation.isPending;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setFieldErrors({});
+
+    createSchoolMutation.mutate({
+      name: name.trim(),
+      slug: slug.trim().toLowerCase(),
+      countryCode,
+      timezone,
+      currencyCode,
+      defaultLocale,
+    });
   };
 
   return (
