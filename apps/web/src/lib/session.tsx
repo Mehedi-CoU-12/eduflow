@@ -1,8 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PublicTenantDto, SessionContextDto } from '@eduflow/types';
-import { apiFetch, ApiRequestError } from './api';
+import { apiFetch } from './api';
 
 interface SessionState {
   session: SessionContextDto | null;
@@ -21,36 +22,39 @@ const SessionContext = createContext<SessionState>({
 });
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<SessionContextDto | null>(null);
-  const [publicTenant, setPublicTenant] = useState<PublicTenantDto | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const fetchSession = useCallback(async () => {
-    try {
-      const [tenantData, sessionData] = await Promise.allSettled([
-        apiFetch<PublicTenantDto>('/tenant'),
-        apiFetch<SessionContextDto>('/auth/session'),
-      ]);
-
-      if (tenantData.status === 'fulfilled') {
-        setPublicTenant(tenantData.value);
+  const { data: publicTenant = null } = useQuery<PublicTenantDto | null>({
+    queryKey: ['publicTenant'],
+    queryFn: async () => {
+      try {
+        return await apiFetch<PublicTenantDto>('/tenant');
+      } catch {
+        return null;
       }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-      if (sessionData.status === 'fulfilled') {
-        setSession(sessionData.value);
-      } else {
-        setSession(null);
+  const {
+    data: session = null,
+    isLoading: sessionLoading,
+    refetch,
+  } = useQuery<SessionContextDto | null>({
+    queryKey: ['session'],
+    queryFn: async () => {
+      try {
+        return await apiFetch<SessionContextDto>('/auth/session');
+      } catch {
+        return null;
       }
-    } catch {
-      setSession(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    staleTime: 60 * 1000,
+  });
 
-  useEffect(() => {
-    fetchSession();
-  }, [fetchSession]);
+  const refresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   const logout = async () => {
     try {
@@ -58,7 +62,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
-    setSession(null);
+    queryClient.setQueryData(['session'], null);
+    queryClient.clear();
     window.location.href = '/login';
   };
 
@@ -67,8 +72,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       value={{
         session,
         publicTenant,
-        loading,
-        refresh: fetchSession,
+        loading: sessionLoading,
+        refresh,
         logout,
       }}
     >
