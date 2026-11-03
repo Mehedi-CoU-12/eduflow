@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import type { SchoolDto } from '@eduflow/types';
-import { Settings, Save, AlertCircle, CheckCircle } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { session, refresh } = useSession();
-  const [school, setSchool] = useState<SchoolDto | null>(null);
+  const queryClient = useQueryClient();
+  const { refresh } = useSession();
   const [name, setName] = useState('');
   const [countryCode, setCountryCode] = useState('BD');
   const [timezone, setTimezone] = useState('Asia/Dhaka');
@@ -19,64 +20,66 @@ export default function SettingsPage() {
   const [website, setWebsite] = useState('');
   const [address, setAddress] = useState('');
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    async function loadSchool() {
-      try {
-        setLoading(true);
-        const data = await apiFetch<SchoolDto>('/school');
-        setSchool(data);
-        setName(data.name);
-        setCountryCode(data.countryCode);
-        setTimezone(data.timezone);
-        setCurrencyCode(data.currencyCode);
-        setDefaultLocale(data.defaultLocale);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadSchool();
-  }, []);
+  const { data: school, isLoading: loading } = useQuery<SchoolDto>({
+    queryKey: ['school'],
+    queryFn: () => apiFetch<SchoolDto>('/school'),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    if (school) {
+      setName(school.name);
+      setCountryCode(school.countryCode);
+      setTimezone(school.timezone);
+      setCurrencyCode(school.currencyCode);
+      setDefaultLocale(school.defaultLocale);
+    }
+  }, [school]);
+
+  const updateMutation = useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      apiFetch<SchoolDto>('/school', {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: async (updated) => {
+      queryClient.setQueryData(['school'], updated);
+      await queryClient.invalidateQueries({ queryKey: ['school'] });
+      await queryClient.invalidateQueries({ queryKey: ['session'] });
+      setSuccess(true);
+      await refresh();
+    },
+    onError: (err: unknown) => {
+      if (err instanceof ApiRequestError) {
+        setError(err.message);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to update settings');
+      }
+    },
+  });
+
+  const saving = updateMutation.isPending;
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setError(null);
     setSuccess(false);
 
-    try {
-      const updated = await apiFetch<SchoolDto>('/school', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          name,
-          countryCode,
-          timezone,
-          currencyCode,
-          defaultLocale,
-          email: email || null,
-          phone: phone || null,
-          website: website || null,
-          address: address || null,
-        }),
-      });
-      setSchool(updated);
-      setSuccess(true);
-      await refresh();
-    } catch (err: any) {
-      if (err instanceof ApiRequestError) {
-        setError(err.message);
-      } else {
-        setError('Failed to update school profile.');
-      }
-    } finally {
-      setSaving(false);
-    }
+    updateMutation.mutate({
+      name,
+      countryCode,
+      timezone,
+      currencyCode,
+      defaultLocale,
+      email: email || null,
+      phone: phone || null,
+      website: website || null,
+      address: address || null,
+    });
   };
 
   if (loading) {
