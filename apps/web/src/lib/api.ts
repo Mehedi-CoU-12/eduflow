@@ -63,12 +63,12 @@ export async function apiFetch<T>(
     return undefined as unknown as T;
   }
 
-  const json: ApiResponse<T> = await res.json().catch(() => ({
+  const json = (await res.json().catch(() => ({
     error: {
       code: 'INTERNAL_ERROR',
       message: 'Failed to parse JSON response',
     },
-  }));
+  }))) as ApiResponse<T>;
 
   if ('error' in json) {
     throw new ApiRequestError(
