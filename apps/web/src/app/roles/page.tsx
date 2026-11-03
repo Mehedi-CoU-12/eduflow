@@ -1,44 +1,61 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { apiFetch, ApiRequestError } from '@/lib/api';
+import React, { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api';
 import type { PermissionDto, RoleDto } from '@eduflow/types';
-import { Shield, Plus, Trash2, AlertCircle, Check, X } from 'lucide-react';
+import { Shield, Plus, Trash2, AlertCircle, X } from 'lucide-react';
 
 export default function RolesPage() {
-  const [roles, setRoles] = useState<RoleDto[]>([]);
-  const [catalog, setCatalog] = useState<PermissionDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   // Create role modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [roleName, setRoleName] = useState('');
   const [roleDescription, setRoleDescription] = useState('');
   const [selectedGrants, setSelectedGrants] = useState<Record<string, 'all' | 'assigned' | 'own'>>({});
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [rolesRes, catalogRes] = await Promise.all([
-        apiFetch<RoleDto[]>('/roles'),
-        apiFetch<PermissionDto[]>('/permissions'),
-      ]);
-      setRoles(rolesRes);
-      setCatalog(catalogRes);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: roles = [], isLoading: rolesLoading } = useQuery<RoleDto[]>({
+    queryKey: ['roles'],
+    queryFn: () => apiFetch<RoleDto[]>('/roles'),
+  });
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const { data: catalog = [], isLoading: catalogLoading } = useQuery<PermissionDto[]>({
+    queryKey: ['permissions'],
+    queryFn: () => apiFetch<PermissionDto[]>('/permissions'),
+  });
 
-  const handleCreateRole = async (e: React.FormEvent) => {
+  const loading = rolesLoading || catalogLoading;
+
+  const createRoleMutation = useMutation({
+    mutationFn: (body: { name: string; description?: string; grants: { key: string; scope: 'all' | 'assigned' | 'own' }[] }) =>
+      apiFetch('/roles', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['roles'] });
+      setShowCreateModal(false);
+      setRoleName('');
+      setRoleDescription('');
+      setSelectedGrants({});
+      setError(null);
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  const submitting = createRoleMutation.isPending;
+
+  const deleteRoleMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/roles/${id}`, { method: 'DELETE' }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['roles'] });
+    },
+    onError: (err: Error) => alert(err.message),
+  });
+
+  const handleCreateRole = (e: React.FormEvent) => {
     e.preventDefault();
     const grantsList = Object.entries(selectedGrants).map(([key, scope]) => ({ key, scope }));
     if (grantsList.length === 0) {
@@ -46,37 +63,17 @@ export default function RolesPage() {
       return;
     }
 
-    setSubmitting(true);
     setError(null);
-    try {
-      await apiFetch('/roles', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: roleName,
-          description: roleDescription || undefined,
-          grants: grantsList,
-        }),
-      });
-      setShowCreateModal(false);
-      setRoleName('');
-      setRoleDescription('');
-      setSelectedGrants({});
-      await loadData();
-    } catch (err: any) {
-      setError(err.message || 'Failed to create role');
-    } finally {
-      setSubmitting(false);
-    }
+    createRoleMutation.mutate({
+      name: roleName,
+      description: roleDescription || undefined,
+      grants: grantsList,
+    });
   };
 
-  const handleDeleteRole = async (role: RoleDto) => {
+  const handleDeleteRole = (role: RoleDto) => {
     if (!confirm(`Are you sure you want to delete custom role "${role.name}"?`)) return;
-    try {
-      await apiFetch(`/roles/${role.id}`, { method: 'DELETE' });
-      await loadData();
-    } catch (err: any) {
-      alert(err.message || 'Failed to delete role');
-    }
+    deleteRoleMutation.mutate(role.id);
   };
 
   return (
