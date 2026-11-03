@@ -85,7 +85,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
-      if (status === HttpStatus.NOT_FOUND) {
+      if (status === Number(HttpStatus.NOT_FOUND)) {
         const path = request.originalUrl.split('?')[0] ?? request.originalUrl;
         return { status, code: 'NOT_FOUND', message: `Cannot ${request.method} ${path}` };
       }
