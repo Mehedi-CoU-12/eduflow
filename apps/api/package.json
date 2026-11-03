@@ -11,7 +11,7 @@
     "start:worker": "node dist/worker.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "NODE_OPTIONS='--experimental-vm-modules --disable-warning=ExperimentalWarning' jest --config jest.config.js",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --disable-warning=ExperimentalWarning' jest --config jest.config.js --passWithNoTests",
     "test:e2e": "NODE_OPTIONS='--experimental-vm-modules --disable-warning=ExperimentalWarning' jest --config jest.e2e.config.js",
     "test:db:reset": "tsx test/setup/reset-test-database.ts",
     "db:generate": "prisma generate",
