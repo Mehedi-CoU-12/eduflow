@@ -13,6 +13,7 @@ import { QueueModule } from './infrastructure/queue/queue.module.js';
 import { RateLimitModule } from './infrastructure/rate-limit/rate-limit.module.js';
 import { RedisModule } from './infrastructure/redis/redis.module.js';
 import { AccessControlModule } from './modules/access-control/access-control.module.js';
+import { AcademicsModule } from './modules/academics/academics.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
@@ -47,6 +48,7 @@ export class AppModule {
         SchoolsModule,
         UsersModule,
         MembershipsModule,
+        AcademicsModule,
         HealthModule,
       ],
       providers: [
