@@ -116,6 +116,20 @@ export const PERMISSIONS = {
     scopes: ALL,
   },
 
+  // Academics
+  'academics.view': {
+    realm: 'school',
+    module: 'academics',
+    description: 'View academic structure, classes, sections, and subjects',
+    scopes: ANY_SCOPE,
+  },
+  'academics.manage': {
+    realm: 'school',
+    module: 'academics',
+    description: 'Manage academic years, terms, classes, sections, and subjects',
+    scopes: ALL,
+  },
+
   // Students
   'students.view': {
     realm: 'school',
