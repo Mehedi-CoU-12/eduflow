@@ -18,7 +18,7 @@ export class PermissionSet<K extends PermissionKey = PermissionKey> {
   private constructor(private readonly grants: ReadonlyMap<K, PermissionScope>) {}
 
   static empty<K extends PermissionKey>(): PermissionSet<K> {
-    return new PermissionSet(new Map());
+    return new PermissionSet<K>(new Map<K, PermissionScope>());
   }
 
   static fromGrants<K extends PermissionKey>(grants: Iterable<Grant<K>>): PermissionSet<K> {
