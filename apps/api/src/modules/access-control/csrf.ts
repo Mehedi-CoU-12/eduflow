@@ -37,6 +37,18 @@ export function assertSameOrigin(req: Request, hostname: string): void {
     if (originHost && originHost === hostname) return;
     throw rejected();
   }
+
+  const referer = req.get('referer');
+  if (referer !== undefined) {
+    let refererHost: string | null = null;
+    try {
+      refererHost = normalizeHostname(new URL(referer).host);
+    } catch {
+      refererHost = null;
+    }
+    if (refererHost && refererHost === hostname) return;
+    throw rejected();
+  }
 }
 
 function rejected(): AppError {
