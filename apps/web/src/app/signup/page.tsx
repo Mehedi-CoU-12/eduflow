@@ -2,39 +2,41 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useMutation } from '@tanstack/react-query';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { GraduationCap, ArrowRight, Lock, Mail, User, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function SignupPage() {
-  const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
-
-    try {
-      await apiFetch('/auth/signup', {
+  const signupMutation = useMutation({
+    mutationFn: () =>
+      apiFetch('/auth/signup', {
         method: 'POST',
         body: JSON.stringify({ name, email, password }),
-      });
+      }),
+    onSuccess: () => {
       setSuccess(true);
-    } catch (err: any) {
+    },
+    onError: (err: unknown) => {
       if (err instanceof ApiRequestError) {
         setError(err.message);
       } else {
         setError('Failed to create account. Please check the information provided.');
       }
-    } finally {
-      setSubmitting(false);
-    }
+    },
+  });
+
+  const submitting = signupMutation.isPending;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    signupMutation.mutate();
   };
 
   return (

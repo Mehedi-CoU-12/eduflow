@@ -19,7 +19,7 @@ export class ResponseEnvelopeInterceptor implements NestInterceptor {
       map((value: unknown) => {
         if (value instanceof StreamableFile) return value;
         const response = context.switchToHttp().getResponse<Response>();
-        if (response.statusCode === HttpStatus.NO_CONTENT) return undefined;
+        if (response.statusCode === Number(HttpStatus.NO_CONTENT)) return undefined;
         if (value instanceof Page) return { success: true, data: value.items, meta: value.meta };
         return { success: true, data: value ?? null };
       }),

@@ -42,6 +42,19 @@ export const ERROR_CODES = [
   'ROLE_NOT_FOUND',
   'ROLE_EXISTS',
   'ROLE_IN_USE',
+
+  // Academics
+  'ACADEMIC_YEAR_NOT_FOUND',
+  'ACADEMIC_YEAR_EXISTS',
+  'TERM_NOT_FOUND',
+  'TERM_EXISTS',
+  'CLASS_NOT_FOUND',
+  'CLASS_EXISTS',
+  'SECTION_NOT_FOUND',
+  'SECTION_EXISTS',
+  'SUBJECT_NOT_FOUND',
+  'SUBJECT_EXISTS',
+  'RECORD_IN_USE',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

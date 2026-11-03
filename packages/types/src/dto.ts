@@ -3,6 +3,11 @@
  * Dates are ISO 8601 strings.
  */
 import type {
+  AcademicYearStatus,
+  SubjectType,
+  TermStatus,
+} from './academics/schemas.js';
+import type {
   PermissionKey,
   PermissionScope,
   PlatformPermissionKey,
@@ -145,4 +150,55 @@ export interface PlatformUserDto extends UserDto {
   status: string;
   schoolCount: number;
   createdAt: string;
+}
+
+export interface AcademicYearDto {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: AcademicYearStatus;
+  termCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TermDto {
+  id: string;
+  academicYearId: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: TermStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SectionDto {
+  id: string;
+  classId: string;
+  name: string;
+  capacity: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClassDto {
+  id: string;
+  name: string;
+  code: string;
+  sectionCount?: number;
+  sections?: SectionDto[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubjectDto {
+  id: string;
+  name: string;
+  code: string;
+  type: SubjectType;
+  creditHours: number | null;
+  createdAt: string;
+  updatedAt: string;
 }

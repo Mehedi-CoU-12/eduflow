@@ -16,10 +16,10 @@ import type { RequestMeta } from '../../common/http/request-context.js';
 import { APP_CONFIG } from '../../config/config.module.js';
 import type { AppConfig } from '../../config/env.js';
 import { AppDatabase } from '../../infrastructure/database/app-database.js';
-import { SystemDatabase } from '../../infrastructure/database/system-database.js';
 import { MailService } from '../../infrastructure/mail/mail.service.js';
 import { PermissionSet, type Grant } from '../access-control/permission-set.js';
 import { AuditService } from '../audit/audit.service.js';
+import { UserProvisioningService } from '../auth/user-provisioning.service.js';
 import { schoolUrl } from '../tenancy/school-urls.js';
 import type { TenantContext } from '../tenancy/tenant-context.js';
 import { MEMBER_SELECT, MembersRepository, type MemberRow } from './members.repository.js';
@@ -28,7 +28,7 @@ import { MEMBER_SELECT, MembersRepository, type MemberRow } from './members.repo
 export class MembersService {
   constructor(
     private readonly db: AppDatabase,
-    private readonly system: SystemDatabase,
+    private readonly userProvisioning: UserProvisioningService,
     private readonly mail: MailService,
     private readonly members: MembersRepository,
     private readonly audit: AuditService,
@@ -132,12 +132,10 @@ export class MembersService {
       throw AppError.forbidden('ROLE_ASSIGNMENT_FORBIDDEN', 'You can only assign roles whose permissions you hold yourself');
     }
 
-    // Find or create global user record
-    const user = await this.system.client.user.upsert({
-      where: { email: input.email },
-      create: { email: input.email, name: input.name },
-      update: {},
-      select: { id: true, name: true, email: true, locale: true },
+    // Find or create global user record via auth identity provisioning
+    const user = await this.userProvisioning.findOrCreateForInvite({
+      email: input.email,
+      name: input.name,
     });
 
     const member = await this.db.withTenant(tenant, async (tx) => {
@@ -213,6 +211,18 @@ export class MembersService {
       if (!member) throw memberNotFound();
 
       if (member.status === input.status) return toMemberDto(member);
+
+      const roleIds = member.roles.map(({ role }) => role.id);
+      const roles = await this.members.findAssignableRoles(tx, roleIds);
+      const memberGrants = PermissionSet.fromGrants(
+        roles.flatMap((r) => schoolGrants(r.grants)),
+      );
+      if (!tenant.permissions.covers(memberGrants)) {
+        throw AppError.forbidden(
+          'ROLE_ASSIGNMENT_FORBIDDEN',
+          'You cannot modify the status of a member with permissions broader than your own',
+        );
+      }
 
       const hasOwnerRole = member.roles.some(({ role }) => role.key === 'school_owner');
       if (hasOwnerRole && input.status !== 'active' && (await this.members.countActiveOwners(tx)) <= 1) {

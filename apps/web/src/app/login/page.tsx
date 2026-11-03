@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useMutation } from '@tanstack/react-query';
 import { useSession } from '@/lib/session';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { GraduationCap, ArrowRight, Lock, Mail, AlertCircle } from 'lucide-react';
@@ -13,29 +14,32 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
-
-    try {
-      await apiFetch('/auth/login', {
+  const loginMutation = useMutation({
+    mutationFn: () =>
+      apiFetch('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
-      });
+      }),
+    onSuccess: async () => {
       await refresh();
       router.push('/');
-    } catch (err: any) {
+    },
+    onError: (err: unknown) => {
       if (err instanceof ApiRequestError) {
         setError(err.message);
       } else {
         setError('Failed to sign in. Please check your credentials.');
       }
-    } finally {
-      setSubmitting(false);
-    }
+    },
+  });
+
+  const submitting = loginMutation.isPending;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    loginMutation.mutate();
   };
 
   const isSchoolHost = publicTenant?.host === 'school';

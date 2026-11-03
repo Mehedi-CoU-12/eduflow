@@ -20,7 +20,8 @@ export class RoutePolicyCheck implements OnModuleInit {
   onModuleInit(): void {
     const missing: string[] = [];
     for (const wrapper of this.discovery.getControllers()) {
-      const { instance, metatype } = wrapper;
+      const instance = wrapper.instance as object | null | undefined;
+      const metatype = wrapper.metatype as (new (...args: unknown[]) => unknown) | undefined;
       if (!instance || !metatype) continue;
       const prototype = Object.getPrototypeOf(instance) as Record<string, unknown>;
       for (const name of this.scanner.getAllMethodNames(prototype)) {

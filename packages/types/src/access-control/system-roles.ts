@@ -52,6 +52,7 @@ export const SCHOOL_SYSTEM_ROLES = {
     description: 'Manages fees, invoices, payments and refunds.',
     grants: {
       'school.view': 'all',
+      'academics.view': 'all',
       'students.view': 'all',
       'fees.view': 'all',
       'fees.create': 'all',
@@ -65,6 +66,7 @@ export const SCHOOL_SYSTEM_ROLES = {
     description: 'Teaches assigned sections; sees only their own classes and students.',
     grants: {
       'school.view': 'all',
+      'academics.view': 'assigned',
       'students.view': 'assigned',
       'attendance.view': 'assigned',
       'attendance.mark': 'assigned',
@@ -78,6 +80,7 @@ export const SCHOOL_SYSTEM_ROLES = {
     description: 'Student portal access to their own records.',
     grants: {
       'school.view': 'all',
+      'academics.view': 'own',
       'students.view': 'own',
       'attendance.view': 'own',
       'results.view': 'own',
@@ -89,6 +92,7 @@ export const SCHOOL_SYSTEM_ROLES = {
     description: "Parent portal access to their children's records.",
     grants: {
       'school.view': 'all',
+      'academics.view': 'own',
       'students.view': 'own',
       'attendance.view': 'own',
       'results.view': 'own',
@@ -101,6 +105,7 @@ export const SCHOOL_SYSTEM_ROLES = {
     description: 'Runs the library; can look up students.',
     grants: {
       'school.view': 'all',
+      'academics.view': 'all',
       'students.view': 'all',
     },
   },

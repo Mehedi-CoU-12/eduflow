@@ -1,30 +1,20 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import type { AuditLogDto } from '@eduflow/types';
-import { Clock, Search, ChevronDown, ChevronRight, User } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 export default function AuditPage() {
-  const [logs, setLogs] = useState<AuditLogDto[]>([]);
-  const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await apiFetch<{ items: AuditLogDto[] }>('/audit?limit=50');
-      setLogs(res.items);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: auditData, isLoading: loading } = useQuery<{ items: AuditLogDto[] }>({
+    queryKey: ['audit'],
+    queryFn: () => apiFetch<{ items: AuditLogDto[] }>('/audit?limit=50'),
+  });
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const logs = auditData?.items ?? [];
 
   return (
     <div className="space-y-6">

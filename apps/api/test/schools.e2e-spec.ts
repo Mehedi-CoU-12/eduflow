@@ -46,8 +46,9 @@ describe('school creation (onboarding step 1)', () => {
     });
 
     const session = await request(t.http).get('/api/v1/auth/session').set('Host', ROOT).set('Cookie', cookie).expect(200);
-    expect(session.body.data.tenant.school.slug).toBe(slug);
-    expect(session.body.data.tenant.roles.map((role: { key: string }) => role.key)).toEqual(['school_owner']);
+    const tenantData = session.body.data as { tenant: { school: { slug: string }; roles: { key: string }[] } };
+    expect(tenantData.tenant.school.slug).toBe(slug);
+    expect(tenantData.tenant.roles.map((role) => role.key)).toEqual(['school_owner']);
 
     // The new school's own subdomain resolves immediately, and the owner can sign in there.
     await request(t.http).get('/api/v1/tenant').set('Host', `${slug}.localhost`).expect(200);

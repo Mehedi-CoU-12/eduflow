@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { apiFetch, ApiRequestError } from '@/lib/api';
+import React, { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api';
 import type { MemberDto, RoleDto } from '@eduflow/types';
-import { Users, UserPlus, Shield, Search, MoreVertical, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { UserPlus, Search, AlertCircle, X } from 'lucide-react';
 
 export default function MembersPage() {
-  const [members, setMembers] = useState<MemberDto[]>([]);
-  const [roles, setRoles] = useState<RoleDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
 
   // Modals
@@ -16,104 +15,113 @@ export default function MembersPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
-  const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
   // Edit roles modal
   const [editingMember, setEditingMember] = useState<MemberDto | null>(null);
   const [editRoleIds, setEditRoleIds] = useState<string[]>([]);
-  const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [membersRes, rolesRes] = await Promise.all([
-        apiFetch<{ items: MemberDto[] }>(`/members?limit=50${search ? `&q=${encodeURIComponent(search)}` : ''}`),
-        apiFetch<RoleDto[]>('/roles'),
-      ]);
-      setMembers(membersRes.items);
-      setRoles(rolesRes);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [search]);
+  const { data: membersData, isLoading: membersLoading } = useQuery<{ items: MemberDto[] }>({
+    queryKey: ['members', search],
+    queryFn: () =>
+      apiFetch<{ items: MemberDto[] }>(`/members?limit=50${search ? `&q=${encodeURIComponent(search)}` : ''}`),
+  });
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const { data: roles = [], isLoading: rolesLoading } = useQuery<RoleDto[]>({
+    queryKey: ['roles'],
+    queryFn: () => apiFetch<RoleDto[]>('/roles'),
+  });
 
-  const handleInvite = async (e: React.FormEvent) => {
+  const members = membersData?.items ?? [];
+  const loading = membersLoading || rolesLoading;
+
+  const inviteMutation = useMutation({
+    mutationFn: (body: { email: string; name: string; roleIds: string[] }) =>
+      apiFetch('/members/invite', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['members'] });
+      setShowInviteModal(false);
+      setInviteEmail('');
+      setInviteName('');
+      setSelectedRoleIds([]);
+      setInviteError(null);
+    },
+    onError: (err: Error) => setInviteError(err.message),
+  });
+
+  const updateRolesMutation = useMutation({
+    mutationFn: ({ memberId, roleIds }: { memberId: string; roleIds: string[] }) =>
+      apiFetch(`/members/${memberId}/roles`, {
+        method: 'PUT',
+        body: JSON.stringify({ roleIds }),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['members'] });
+      setEditingMember(null);
+      setEditError(null);
+    },
+    onError: (err: Error) => setEditError(err.message),
+  });
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ memberId, status }: { memberId: string; status: string }) =>
+      apiFetch(`/members/${memberId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['members'] });
+    },
+    onError: (err: Error) => alert(err.message),
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: (memberId: string) => apiFetch(`/members/${memberId}`, { method: 'DELETE' }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['members'] });
+    },
+    onError: (err: Error) => alert(err.message),
+  });
+
+  const inviteSubmitting = inviteMutation.isPending;
+  const editSubmitting = updateRolesMutation.isPending;
+
+  const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedRoleIds.length === 0) {
       setInviteError('Please select at least one role');
       return;
     }
-    setInviteSubmitting(true);
     setInviteError(null);
-    try {
-      await apiFetch('/members/invite', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: inviteEmail,
-          name: inviteName,
-          roleIds: selectedRoleIds,
-        }),
-      });
-      setShowInviteModal(false);
-      setInviteEmail('');
-      setInviteName('');
-      setSelectedRoleIds([]);
-      await loadData();
-    } catch (err: any) {
-      setInviteError(err.message || 'Failed to invite member');
-    } finally {
-      setInviteSubmitting(false);
-    }
+    inviteMutation.mutate({
+      email: inviteEmail,
+      name: inviteName,
+      roleIds: selectedRoleIds,
+    });
   };
 
-  const handleUpdateRoles = async (e: React.FormEvent) => {
+  const handleUpdateRoles = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingMember) return;
-    setEditSubmitting(true);
     setEditError(null);
-    try {
-      await apiFetch(`/members/${editingMember.id}/roles`, {
-        method: 'PUT',
-        body: JSON.stringify({ roleIds: editRoleIds }),
-      });
-      setEditingMember(null);
-      await loadData();
-    } catch (err: any) {
-      setEditError(err.message || 'Failed to update roles');
-    } finally {
-      setEditSubmitting(false);
-    }
+    updateRolesMutation.mutate({
+      memberId: editingMember.id,
+      roleIds: editRoleIds,
+    });
   };
 
-  const handleToggleStatus = async (member: MemberDto) => {
+  const handleToggleStatus = (member: MemberDto) => {
     const nextStatus = member.status === 'active' ? 'suspended' : 'active';
-    try {
-      await apiFetch(`/members/${member.id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      await loadData();
-    } catch (err: any) {
-      alert(err.message || 'Failed to update member status');
-    }
+    toggleStatusMutation.mutate({ memberId: member.id, status: nextStatus });
   };
 
-  const handleRemove = async (member: MemberDto) => {
+  const handleRemove = (member: MemberDto) => {
     if (!confirm(`Are you sure you want to remove ${member.user.name} from the school?`)) return;
-    try {
-      await apiFetch(`/members/${member.id}`, { method: 'DELETE' });
-      await loadData();
-    } catch (err: any) {
-      alert(err.message || 'Failed to remove member');
-    }
+    removeMemberMutation.mutate(member.id);
   };
 
   return (
