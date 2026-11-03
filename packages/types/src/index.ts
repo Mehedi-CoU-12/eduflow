@@ -1,6 +1,7 @@
 export * from './access-control/permissions.js';
 export * from './access-control/system-roles.js';
 export * from './access-control/schemas.js';
+export * from './academics/schemas.js';
 export * from './api/envelope.js';
 export * from './api/error-codes.js';
 export * from './audit/schemas.js';
