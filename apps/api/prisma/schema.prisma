@@ -218,11 +218,16 @@ model School {
   createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  domains     SchoolDomain[]
-  memberships SchoolMembership[]
-  roles       Role[]
-  sessions    Session[]
-  auditLogs   AuditLog[]
+  domains       SchoolDomain[]
+  memberships   SchoolMembership[]
+  roles         Role[]
+  sessions      Session[]
+  auditLogs     AuditLog[]
+  academicYears AcademicYear[]
+  terms         Term[]
+  classes       Class[]
+  sections      Section[]
+  subjects      Subject[]
 
   @@map("schools")
 }
@@ -336,4 +341,124 @@ model AuditLog {
   @@index([schoolId, entityType, entityId])
   @@index([actorUserId, createdAt])
   @@map("audit_logs")
+}
+
+// -----------------------------------------------------------------------------
+// Academics
+// -----------------------------------------------------------------------------
+
+enum AcademicYearStatus {
+  upcoming
+  active
+  archived
+}
+
+enum TermStatus {
+  upcoming
+  active
+  completed
+}
+
+enum SubjectType {
+  mandatory
+  elective
+}
+
+/// An academic year (e.g. 2026 or 2026-2027) within a school.
+model AcademicYear {
+  id        String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  schoolId  String             @map("school_id") @db.Uuid
+  name      String
+  startDate DateTime           @map("start_date") @db.Timestamptz(3)
+  endDate   DateTime           @map("end_date") @db.Timestamptz(3)
+  status    AcademicYearStatus @default(upcoming)
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  terms  Term[]
+
+  @@unique([schoolId, name])
+  @@unique([id, schoolId])
+  @@index([schoolId, status])
+  @@map("academic_years")
+}
+
+/// A term or semester within an academic year.
+model Term {
+  id             String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  schoolId       String     @map("school_id") @db.Uuid
+  academicYearId String     @map("academic_year_id") @db.Uuid
+  name           String
+  startDate      DateTime   @map("start_date") @db.Timestamptz(3)
+  endDate        DateTime   @map("end_date") @db.Timestamptz(3)
+  status         TermStatus @default(upcoming)
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Cascade)
+
+  @@unique([academicYearId, name])
+  @@unique([id, schoolId])
+  @@index([schoolId])
+  @@index([academicYearId])
+  @@map("terms")
+}
+
+/// A grade level or class (e.g. Grade 10, Class 6).
+model Class {
+  id        String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  schoolId  String    @map("school_id") @db.Uuid
+  name      String
+  code      String
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  school   School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  sections Section[]
+
+  @@unique([schoolId, name])
+  @@unique([schoolId, code])
+  @@unique([id, schoolId])
+  @@index([schoolId])
+  @@map("classes")
+}
+
+/// A section within a class (e.g. Section A, Section B).
+model Section {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  schoolId  String   @map("school_id") @db.Uuid
+  classId   String   @map("class_id") @db.Uuid
+  name      String
+  capacity  Int?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class  Class  @relation(fields: [classId, schoolId], references: [id, schoolId], onDelete: Cascade)
+
+  @@unique([classId, name])
+  @@unique([id, schoolId])
+  @@index([schoolId])
+  @@index([classId])
+  @@map("sections")
+}
+
+/// A subject taught at the school (e.g. Mathematics, English).
+model Subject {
+  id          String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  schoolId    String      @map("school_id") @db.Uuid
+  name        String
+  code        String
+  type        SubjectType @default(mandatory)
+  creditHours Float?      @map("credit_hours")
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, code])
+  @@index([schoolId])
+  @@map("subjects")
 }
