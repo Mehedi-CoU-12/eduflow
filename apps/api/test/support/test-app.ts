@@ -31,7 +31,7 @@ export async function createTestApp(overrides: Record<string, string> = {}): Pro
 
   return {
     app,
-    http: app.getHttpServer() as Server,
+    http: app.getHttpServer(),
     config,
     db: app.get(SystemDatabase).client,
     mail,

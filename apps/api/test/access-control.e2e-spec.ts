@@ -58,7 +58,8 @@ describe('authorisation and role management', () => {
     const res = await api
       .put(`/members/${teacherMembership}/roles`, { roleIds: [roleIds.teacher, roleIds.guardian] })
       .expect(200);
-    expect(res.body.data.roles.map((role: { key: string }) => role.key).sort()).toEqual(['guardian', 'teacher']);
+    const roles = (res.body.data as { roles: { key: string }[] }).roles;
+    expect(roles.map((role) => role.key).sort()).toEqual(['guardian', 'teacher']);
 
     const entry = await t.db.auditLog.findFirstOrThrow({
       where: { schoolId: school.id, action: 'membership.roles_updated', entityId: teacherMembership },
