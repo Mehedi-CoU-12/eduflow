@@ -271,5 +271,178 @@ describe('StudentsService', () => {
   });
 
   describe('getSectionRoster', () => {
+    it('returns section roster with capacity calculations', async () => {
+      fakeTx.db.section.findFirst.mockResolvedValue({
+        id: 'section-1',
+        name: 'Section A',
+        capacity: 40,
+        class: { id: 'class-1', name: 'Class 8', code: 'C8' },
+      });
+      fakeTx.db.studentProfile.findMany.mockResolvedValue([
+        {
+          id: 'sp-1',
+          userId: 'u-1',
+          classId: 'class-1',
+          sectionId: 'section-1',
+          admissionNumber: 'ADM-1',
+          rollNumber: '01',
+          status: 'active',
+          user: { name: 'Student 1', email: 's1@test.com', avatarUrl: null },
+          class: { name: 'Class 8' },
+          section: { name: 'Section A' },
+        },
+      ]);
+
+      const roster = await service.getSectionRoster(fakeTenant, 'section-1');
+      expect(roster.section.sectionId).toBe('section-1');
+      expect(roster.section.className).toBe('Class 8');
+      expect(roster.section.capacity).toBe(40);
+      expect(roster.section.enrolledCount).toBe(1);
+      expect(roster.students).toHaveLength(1);
+    });
+  });
+
+  describe('transferStudents', () => {
+    it('transfers students to another section if capacity permits', async () => {
+      fakeTx.db.class.findFirst.mockResolvedValue({
+        id: 'class-2',
+        name: 'Class 2',
+        schoolId: fakeTenant.schoolId,
+      });
+      fakeTx.db.section.findFirst.mockResolvedValue({
+        id: 'section-2',
+        classId: 'class-2',
+        name: 'Section B',
+        capacity: 35,
+        schoolId: fakeTenant.schoolId,
+        class: { name: 'Class 2' },
+      });
+      fakeTx.db.studentProfile.count.mockResolvedValue(10);
+      fakeTx.db.studentProfile.findMany.mockResolvedValue([
+        { id: 'sp-1', admissionNumber: 'ADM-1' },
+        { id: 'sp-2', admissionNumber: 'ADM-2' },
+      ]);
+      fakeTx.db.studentProfile.updateMany.mockResolvedValue({ count: 2 });
+
+      const result = await service.transferStudents(
+        fakeTenant,
+        {
+          studentIds: ['sp-1', 'sp-2'],
+          targetClassId: 'class-2',
+          targetSectionId: 'section-2',
+        },
+        fakeMeta,
+      );
+
+      expect(result.transferredCount).toBe(2);
+      expect(mockAudit.record).toHaveBeenCalled();
+    });
+
+    it('rejects transfer if target section would exceed capacity', async () => {
+      fakeTx.db.class.findFirst.mockResolvedValue({
+        id: 'class-2',
+        name: 'Class 2',
+        schoolId: fakeTenant.schoolId,
+      });
+      fakeTx.db.section.findFirst.mockResolvedValue({
+        id: 'section-2',
+        classId: 'class-2',
+        name: 'Section B',
+        capacity: 10,
+        schoolId: fakeTenant.schoolId,
+      });
+      fakeTx.db.studentProfile.count.mockResolvedValue(9);
+
+      await expect(
+        service.transferStudents(
+          fakeTenant,
+          {
+            studentIds: ['sp-1', 'sp-2'],
+            targetClassId: 'class-2',
+            targetSectionId: 'section-2',
+          },
+          fakeMeta,
+        ),
+      ).rejects.toThrow(AppError);
+    });
+  });
+
+  describe('Guardian Linking', () => {
+    it('links guardian to student', async () => {
+      fakeTx.db.studentProfile.findFirst.mockResolvedValue({
+        id: 'sp-1',
+        schoolId: fakeTenant.schoolId,
+        user: { name: 'Alice Student' },
+      });
+      fakeTx.db.schoolMembership.findFirst.mockResolvedValue({
+        id: 'membership-g',
+        userId: 'guardian-u1',
+        user: { name: 'Mrs. Parent', email: 'parent@test.com' },
+        membershipRoles: [{ role: { key: 'guardian' } }],
+      });
+      fakeTx.db.guardianStudent.findUnique.mockResolvedValue(null);
+      fakeTx.db.guardianStudent.create.mockResolvedValue({
+        id: 'gs-1',
+        guardianUserId: 'guardian-u1',
+        studentId: 'sp-1',
+        relationship: 'Mother',
+        isPrimary: true,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        guardianUser: { name: 'Mrs. Parent', email: 'parent@test.com' },
+        student: {
+          id: 'sp-1',
+          admissionNumber: 'ADM-1',
+          rollNumber: '01',
+          class: { name: 'Class 8' },
+          section: { name: 'Section A' },
+          user: { name: 'Alice Student', email: 's@test.com' },
+        },
+      });
+
+      const link = await service.linkGuardianStudent(
+        fakeTenant,
+        'guardian-u1',
+        {
+          studentId: 'sp-1',
+          relationship: 'Mother',
+          isPrimary: true,
+        },
+        fakeMeta,
+      );
+
+      expect(link.id).toBe('gs-1');
+      expect(link.relationship).toBe('Mother');
+      expect(mockAudit.record).toHaveBeenCalled();
+    });
+
+    it('rejects duplicate guardian link', async () => {
+      fakeTx.db.studentProfile.findFirst.mockResolvedValue({
+        id: 'sp-1',
+        schoolId: fakeTenant.schoolId,
+        user: { name: 'Alice Student' },
+      });
+      fakeTx.db.schoolMembership.findFirst.mockResolvedValue({
+        id: 'membership-g',
+        userId: 'guardian-u1',
+        user: { name: 'Mrs. Parent', email: 'parent@test.com' },
+        membershipRoles: [{ role: { key: 'guardian' } }],
+      });
+      fakeTx.db.guardianStudent.findUnique.mockResolvedValue({
+        id: 'existing-gs',
+      });
+
+      await expect(
+        service.linkGuardianStudent(
+          fakeTenant,
+          'guardian-u1',
+          {
+            studentId: 'sp-1',
+            relationship: 'Father',
+            isPrimary: true,
+          },
+          fakeMeta,
+        ),
+      ).rejects.toThrow(AppError);
+    });
   });
 });
