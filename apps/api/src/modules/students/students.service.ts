@@ -293,4 +293,66 @@ export class StudentsService {
   /**
    * Lists admitted students with optional class, section, status, and search filters.
    */
+  async listStudents(tenant: TenantContext, query: ListStudentsQuery): Promise<StudentProfileDto[]> {
+    return this.db.withTenant(tenant, async (tx) => {
+      const where: Record<string, unknown> = { schoolId: tx.schoolId };
+
+      if (query.classId) where.classId = query.classId;
+      if (query.sectionId) where.sectionId = query.sectionId;
+      if (query.status) where.status = query.status;
+
+      if (query.q) {
+        where.OR = [
+          { user: { name: { contains: query.q, mode: 'insensitive' } } },
+          { user: { email: { contains: query.q, mode: 'insensitive' } } },
+          { admissionNumber: { contains: query.q, mode: 'insensitive' } },
+          { rollNumber: { contains: query.q, mode: 'insensitive' } },
+        ];
+      }
+
+      const rows = await tx.db.studentProfile.findMany({
+        where,
+        include: {
+          user: { select: { name: true, email: true, avatarUrl: true } },
+          class: { select: { name: true } },
+          section: { select: { name: true } },
+        },
+        orderBy: [
+          { class: { name: 'asc' } },
+          { section: { name: 'asc' } },
+          { rollNumber: 'asc' },
+          { admissionNumber: 'asc' },
+        ],
+        take: query.limit || 50,
+      });
+
+      return rows.map(toStudentProfileDto);
+    });
+  }
+
+  /**
+   * Retrieves single student profile with enrolled class, section, and linked guardians.
+   */
+  async getStudent(tenant: TenantContext, studentId: string): Promise<StudentProfileDto> {
+    return this.db.withTenant(tenant, async (tx) => {
+      const row = await tx.db.studentProfile.findFirst({
+        where: { id: studentId, schoolId: tx.schoolId },
+        include: {
+          user: { select: { name: true, email: true, avatarUrl: true } },
+          class: { select: { name: true } },
+          section: { select: { name: true } },
+        },
+      });
+
+      if (!row) {
+        throw AppError.notFound('STUDENT_NOT_FOUND', 'Student record not found in this school');
+      }
+
+      return toStudentProfileDto(row);
+    });
+  }
+
+  /**
+   * Updates student details (e.g. roll number or status).
+   */
 }
