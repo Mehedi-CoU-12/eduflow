@@ -147,4 +147,4 @@ export class StudentsController {
   ): Promise<void> {
     return this.students.unlinkGuardianStudent(tenant, guardianUserId, studentId, meta);
   }
-}}
+}
