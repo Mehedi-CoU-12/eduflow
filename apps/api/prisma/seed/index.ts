@@ -84,6 +84,204 @@ async function seedSchool(db: PrismaClient, school: SeedSchool, passwordHash: st
       skipDuplicates: true,
     });
   }
+
+  // Academic Structure
+  const year = await db.academicYear.upsert({
+    where: { schoolId_name: { schoolId, name: '2026-2027' } },
+    create: {
+      schoolId,
+      name: '2026-2027',
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-12-31'),
+      status: 'active',
+    },
+    update: {},
+    select: { id: true },
+  });
+
+  await db.term.upsert({
+    where: { academicYearId_name: { academicYearId: year.id, name: 'Term 1' } },
+    create: {
+      schoolId,
+      academicYearId: year.id,
+      name: 'Term 1',
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-06-30'),
+      status: 'active',
+    },
+    update: {},
+    select: { id: true },
+  });
+
+  const class8 = await db.class.upsert({
+    where: { schoolId_name: { schoolId, name: 'Class 8' } },
+    create: { schoolId, name: 'Class 8', code: 'C8' },
+    update: {},
+    select: { id: true },
+  });
+
+  const class5 = await db.class.upsert({
+    where: { schoolId_name: { schoolId, name: 'Class 5' } },
+    create: { schoolId, name: 'Class 5', code: 'C5' },
+    update: {},
+    select: { id: true },
+  });
+
+  const sec8A = await db.section.upsert({
+    where: { classId_name: { classId: class8.id, name: 'Section A' } },
+    create: { schoolId, classId: class8.id, name: 'Section A', capacity: 40 },
+    update: {},
+    select: { id: true },
+  });
+
+  const sec5B = await db.section.upsert({
+    where: { classId_name: { classId: class5.id, name: 'Section B' } },
+    create: { schoolId, classId: class5.id, name: 'Section B', capacity: 35 },
+    update: {},
+    select: { id: true },
+  });
+
+  const subMath = await db.subject.upsert({
+    where: { schoolId_code: { schoolId, code: 'MATH' } },
+    create: { schoolId, name: 'Mathematics', code: 'MATH', type: 'mandatory', creditHours: 4 },
+    update: {},
+    select: { id: true },
+  });
+
+  const subScience = await db.subject.upsert({
+    where: { schoolId_code: { schoolId, code: 'SCI' } },
+    create: { schoolId, name: 'General Science', code: 'SCI', type: 'mandatory', creditHours: 3 },
+    update: {},
+    select: { id: true },
+  });
+
+  // Students profiles
+  const studentPeople = people.filter((p) => p.roles.includes('student'));
+  const createdStudentProfiles: { id: string; userId: string }[] = [];
+
+  for (let idx = 0; idx < studentPeople.length; idx++) {
+    const student = studentPeople[idx]!;
+    const user = await db.user.findUnique({ where: { email: student.email }, select: { id: true } });
+    if (!user) continue;
+
+    const isClass8 = idx % 2 === 0;
+    const targetClass = isClass8 ? class8 : class5;
+    const targetSection = isClass8 ? sec8A : sec5B;
+    const admissionNumber = `ADM-${school.slug.toUpperCase()}-${String(idx + 1).padStart(3, '0')}`;
+
+    const profile = await db.studentProfile.upsert({
+      where: { userId: user.id },
+      create: {
+        schoolId,
+        userId: user.id,
+        classId: targetClass.id,
+        sectionId: targetSection.id,
+        admissionNumber,
+        rollNumber: String(idx + 1).padStart(2, '0'),
+        status: 'active',
+      },
+      update: {
+        classId: targetClass.id,
+        sectionId: targetSection.id,
+      },
+      select: { id: true, userId: true },
+    });
+    createdStudentProfiles.push(profile);
+  }
+
+  // Teacher assignments
+  const teacherPeople = people.filter((p) => p.roles.some((r) => r === 'teacher' || r.includes('teacher')));
+  if (teacherPeople.length > 0) {
+    const t1 = await db.user.findUnique({ where: { email: teacherPeople[0]!.email }, select: { id: true } });
+    if (t1) {
+      await db.teacherAssignment.upsert({
+        where: {
+          schoolId_teacherUserId_sectionId_subjectId: {
+            schoolId,
+            teacherUserId: t1.id,
+            sectionId: sec8A.id,
+            subjectId: subMath.id,
+          },
+        },
+        create: {
+          schoolId,
+          teacherUserId: t1.id,
+          sectionId: sec8A.id,
+          subjectId: subMath.id,
+          isClassTeacher: true,
+        },
+        update: {},
+      });
+    }
+  }
+
+  if (teacherPeople.length > 1) {
+    const t2 = await db.user.findUnique({ where: { email: teacherPeople[1]!.email }, select: { id: true } });
+    if (t2) {
+      await db.teacherAssignment.upsert({
+        where: {
+          schoolId_teacherUserId_sectionId_subjectId: {
+            schoolId,
+            teacherUserId: t2.id,
+            sectionId: sec5B.id,
+            subjectId: subScience.id,
+          },
+        },
+        create: {
+          schoolId,
+          teacherUserId: t2.id,
+          sectionId: sec5B.id,
+          subjectId: subScience.id,
+          isClassTeacher: true,
+        },
+        update: {},
+      });
+    }
+  }
+
+  // Guardian-student links: Link guardian 01 to first two students (Rahim & Ayesha)
+  const guardianPeople = people.filter((p) => p.roles.includes('guardian'));
+  if (guardianPeople.length > 0 && createdStudentProfiles.length >= 2) {
+    const g1 = await db.user.findUnique({ where: { email: guardianPeople[0]!.email }, select: { id: true } });
+    if (g1) {
+      await db.guardianStudent.upsert({
+        where: {
+          schoolId_guardianUserId_studentId: {
+            schoolId,
+            guardianUserId: g1.id,
+            studentId: createdStudentProfiles[0]!.id,
+          },
+        },
+        create: {
+          schoolId,
+          guardianUserId: g1.id,
+          studentId: createdStudentProfiles[0]!.id,
+          relationship: 'Father',
+          isPrimary: true,
+        },
+        update: {},
+      });
+
+      await db.guardianStudent.upsert({
+        where: {
+          schoolId_guardianUserId_studentId: {
+            schoolId,
+            guardianUserId: g1.id,
+            studentId: createdStudentProfiles[1]!.id,
+          },
+        },
+        create: {
+          schoolId,
+          guardianUserId: g1.id,
+          studentId: createdStudentProfiles[1]!.id,
+          relationship: 'Father',
+          isPrimary: false,
+        },
+        update: {},
+      });
+    }
+  }
+
   return { slug: school.slug, members: people.length };
 }
 
