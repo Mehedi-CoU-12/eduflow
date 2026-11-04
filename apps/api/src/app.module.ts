@@ -17,10 +17,12 @@ import { AcademicsModule } from './modules/academics/academics.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { DashboardModule } from './modules/dashboard/dashboard.module.js';
+import { FacultyModule } from './modules/faculty/faculty.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { MembershipsModule } from './modules/memberships/memberships.module.js';
 import { PlatformModule } from './modules/platform/platform.module.js';
 import { SchoolsModule } from './modules/schools/schools.module.js';
+import { StudentsModule } from './modules/students/students.module.js';
 import { TenancyModule } from './modules/tenancy/tenancy.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
@@ -50,6 +52,8 @@ export class AppModule {
         UsersModule,
         MembershipsModule,
         AcademicsModule,
+        StudentsModule,
+        FacultyModule,
         DashboardModule,
         HealthModule,
       ],
