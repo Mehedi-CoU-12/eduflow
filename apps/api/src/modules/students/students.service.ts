@@ -505,4 +505,158 @@ export class StudentsService {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Guardian Relationship Linking
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Lists all students linked to a guardian user.
+   */
+  async listGuardianStudents(
+    tenant: TenantContext,
+    guardianUserId: string,
+  ): Promise<GuardianLinkDetailDto[]> {
+    return this.db.withTenant(tenant, async (tx) => {
+      const rows = await tx.db.guardianStudent.findMany({
+        where: { guardianUserId, schoolId: tx.schoolId },
+        include: {
+          guardianUser: { select: { id: true, name: true, email: true } },
+          student: {
+            include: {
+              user: { select: { name: true, email: true } },
+              class: { select: { name: true } },
+              section: { select: { name: true } },
+            },
+          },
+        },
+        orderBy: [{ isPrimary: 'desc' }, { student: { admissionNumber: 'asc' } }],
+      });
+
+      return rows.map((r) => ({
+        id: r.id,
+        guardianUserId: r.guardianUserId,
+        guardianName: r.guardianUser.name,
+        guardianEmail: r.guardianUser.email,
+        studentId: r.studentId,
+        studentName: r.student.user.name,
+        studentAdmissionNumber: r.student.admissionNumber,
+        studentRollNumber: r.student.rollNumber,
+        className: r.student.class.name,
+        sectionName: r.student.section.name,
+        relationship: r.relationship,
+        isPrimary: r.isPrimary,
+        createdAt: r.createdAt.toISOString(),
+      }));
+    });
+  }
+
+  /**
+   * Links a student to a guardian user.
+   */
+  async linkGuardianStudent(
+    tenant: TenantContext,
+    guardianUserId: string,
+    input: LinkGuardianStudentInput,
+    meta: RequestMeta,
+  ): Promise<GuardianLinkDetailDto> {
+    return this.db.withTenant(tenant, async (tx) => {
+      // 1. Verify student exists in school
+      const student = await tx.db.studentProfile.findFirst({
+        where: { id: input.studentId, schoolId: tx.schoolId },
+        include: {
+          user: { select: { name: true, email: true } },
+          class: { select: { name: true } },
+          section: { select: { name: true } },
+        },
+      });
+
+      if (!student) {
+        throw AppError.notFound('STUDENT_NOT_FOUND', 'Student record not found in this school');
+      }
+
+      // 2. Verify guardian user exists and is a member of this school
+      const guardianMember = await tx.db.schoolMembership.findFirst({
+        where: { userId: guardianUserId, schoolId: tx.schoolId, status: 'active' },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      });
+
+      if (!guardianMember) {
+        throw AppError.notFound('MEMBER_NOT_FOUND', 'Guardian is not an active member of this school');
+      }
+
+      // 3. Check existing link
+      const existing = await tx.db.guardianStudent.findUnique({
+        where: {
+          schoolId_guardianUserId_studentId: {
+            schoolId: tx.schoolId,
+            guardianUserId,
+            studentId: input.studentId,
+          },
+        },
+      });
+
+      if (existing) {
+        throw AppError.conflict(
+          'GUARDIAN_LINK_EXISTS',
+          'This guardian is already linked to this student',
+        );
+      }
+
+      // 4. Create link
+      const created = await tx.db.guardianStudent.create({
+        data: {
+          schoolId: tx.schoolId,
+          guardianUserId,
+          studentId: input.studentId,
+          relationship: input.relationship,
+          isPrimary: input.isPrimary,
+        },
+        include: {
+          guardianUser: { select: { id: true, name: true, email: true } },
+          student: {
+            include: {
+              user: { select: { name: true, email: true } },
+              class: { select: { name: true } },
+              section: { select: { name: true } },
+            },
+          },
+        },
+      });
+
+      await this.audit.record(
+        tx,
+        {
+          action: 'guardian.linked',
+          entityType: 'guardian_student',
+          entityId: created.id,
+          after: {
+            guardian: guardianMember.user.name,
+            student: student.user.name,
+            relationship: input.relationship,
+          },
+        },
+        meta,
+      );
+
+      return {
+        id: created.id,
+        guardianUserId: created.guardianUserId,
+        guardianName: created.guardianUser.name,
+        guardianEmail: created.guardianUser.email,
+        studentId: created.studentId,
+        studentName: created.student.user.name,
+        studentAdmissionNumber: created.student.admissionNumber,
+        studentRollNumber: created.student.rollNumber,
+        className: created.student.class.name,
+        sectionName: created.student.section.name,
+        relationship: created.relationship,
+        isPrimary: created.isPrimary,
+        createdAt: created.createdAt.toISOString(),
+      };
+    });
+  }
+
+  /**
+   * Unlinks a student from a guardian user.
+   */
 }
