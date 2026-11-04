@@ -440,4 +440,69 @@ export class StudentsService {
   /**
    * Section Rostering: Reassigns / transfers students between sections and classes.
    */
+  async transferStudents(
+    tenant: TenantContext,
+    input: TransferStudentsInput,
+    meta: RequestMeta,
+  ): Promise<{ transferredCount: number }> {
+    return this.db.withTenant(tenant, async (tx) => {
+      // Verify target section and class
+      const targetSection = await tx.db.section.findFirst({
+        where: { id: input.targetSectionId, classId: input.targetClassId, schoolId: tx.schoolId },
+        include: { class: true },
+      });
+
+      if (!targetSection) {
+        throw AppError.notFound(
+          'SECTION_NOT_FOUND',
+          'Target section does not exist in the specified class',
+        );
+      }
+
+      // Check capacity limit if configured
+      if (targetSection.capacity !== null && targetSection.capacity > 0) {
+        const currentCount = await tx.db.studentProfile.count({
+          where: { sectionId: targetSection.id, schoolId: tx.schoolId, status: 'active' },
+        });
+
+        if (currentCount + input.studentIds.length > targetSection.capacity) {
+          throw AppError.conflict(
+            'SECTION_CAPACITY_EXCEEDED',
+            `Target section ${targetSection.name} cannot accommodate ${input.studentIds.length} students (current: ${currentCount}/${targetSection.capacity})`,
+          );
+        }
+      }
+
+      // Perform transfer
+      const updateResult = await tx.db.studentProfile.updateMany({
+        where: {
+          id: { in: input.studentIds },
+          schoolId: tx.schoolId,
+        },
+        data: {
+          classId: input.targetClassId,
+          sectionId: input.targetSectionId,
+        },
+      });
+
+      await this.audit.record(
+        tx,
+        {
+          action: 'student.rostered',
+          entityType: 'student_profile',
+          entityId: input.targetSectionId,
+          after: {
+            targetClass: targetSection.class.name,
+            targetSection: targetSection.name,
+            transferredStudents: input.studentIds,
+          },
+          metadata: { count: updateResult.count },
+        },
+        meta,
+      );
+
+      return { transferredCount: updateResult.count };
+    });
+  }
+
 }
