@@ -659,4 +659,82 @@ export class StudentsService {
   /**
    * Unlinks a student from a guardian user.
    */
+  async unlinkGuardianStudent(
+    tenant: TenantContext,
+    guardianUserId: string,
+    studentId: string,
+    meta: RequestMeta,
+  ): Promise<void> {
+    return this.db.withTenant(tenant, async (tx) => {
+      const link = await tx.db.guardianStudent.findUnique({
+        where: {
+          schoolId_guardianUserId_studentId: {
+            schoolId: tx.schoolId,
+            guardianUserId,
+            studentId,
+          },
+        },
+      });
+
+      if (!link) {
+        throw AppError.notFound('GUARDIAN_LINK_NOT_FOUND', 'Guardian relationship link not found');
+      }
+
+      await tx.db.guardianStudent.delete({
+        where: { id: link.id },
+      });
+
+      await this.audit.record(
+        tx,
+        {
+          action: 'guardian.unlinked',
+          entityType: 'guardian_student',
+          entityId: link.id,
+          metadata: { guardianUserId, studentId },
+        },
+        meta,
+      );
+    });
+  }
+
+  /**
+   * Lists all guardians linked to a specific student.
+   */
+  async listStudentGuardians(
+    tenant: TenantContext,
+    studentId: string,
+  ): Promise<GuardianLinkDetailDto[]> {
+    return this.db.withTenant(tenant, async (tx) => {
+      const rows = await tx.db.guardianStudent.findMany({
+        where: { studentId, schoolId: tx.schoolId },
+        include: {
+          guardianUser: { select: { id: true, name: true, email: true } },
+          student: {
+            include: {
+              user: { select: { name: true, email: true } },
+              class: { select: { name: true } },
+              section: { select: { name: true } },
+            },
+          },
+        },
+        orderBy: [{ isPrimary: 'desc' }],
+      });
+
+      return rows.map((r) => ({
+        id: r.id,
+        guardianUserId: r.guardianUserId,
+        guardianName: r.guardianUser.name,
+        guardianEmail: r.guardianUser.email,
+        studentId: r.studentId,
+        studentName: r.student.user.name,
+        studentAdmissionNumber: r.student.admissionNumber,
+        studentRollNumber: r.student.rollNumber,
+        className: r.student.class.name,
+        sectionName: r.student.section.name,
+        relationship: r.relationship,
+        isPrimary: r.isPrimary,
+        createdAt: r.createdAt.toISOString(),
+      }));
+    });
+  }
 }
