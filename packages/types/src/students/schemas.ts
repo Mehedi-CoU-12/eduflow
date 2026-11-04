@@ -36,3 +36,29 @@ export const listStudentsQuerySchema = z.object({
 });
 export type ListStudentsQuery = z.infer<typeof listStudentsQuerySchema>;
 
+// -----------------------------------------------------------------------------
+// Classroom Rostering Schemas
+// -----------------------------------------------------------------------------
+
+export const transferStudentsSchema = z.object({
+  studentIds: z.array(uuidSchema).min(1).max(100),
+  targetClassId: uuidSchema,
+  targetSectionId: uuidSchema,
+});
+export type TransferStudentsInput = z.infer<typeof transferStudentsSchema>;
+
+export interface SectionRosterSummaryDto {
+  sectionId: string;
+  sectionName: string;
+  classId: string;
+  className: string;
+  classCode: string;
+  capacity: number | null;
+  enrolledCount: number;
+}
+
+export interface SectionRosterDto {
+  section: SectionRosterSummaryDto;
+  students: StudentProfileDto[];
+}
+
