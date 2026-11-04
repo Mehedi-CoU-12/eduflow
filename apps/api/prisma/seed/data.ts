@@ -84,6 +84,19 @@ export const SCHOOLS: readonly SeedSchool[] = [
     customDomain: 'portal.greenfield.test',
     customRoles: [
       {
+        name: 'Principal',
+        description: 'Academic overview and leadership.',
+        grants: {
+          'school.view': 'all',
+          'academics.view': 'all',
+          'academics.manage': 'all',
+          'students.view': 'all',
+          'results.view': 'all',
+          'results.publish': 'all',
+          'attendance.view': 'all',
+        },
+      },
+      {
         name: 'Exam Controller',
         description: 'Coordinates exams and publishes results.',
         grants: {
@@ -99,9 +112,11 @@ export const SCHOOLS: readonly SeedSchool[] = [
     people: [
       { email: 'owner@greenfield.test', name: 'Farhana Rahman', roles: ['school_owner'] },
       { email: 'admin@greenfield.test', name: 'Tanvir Hasan', roles: ['school_admin'] },
+      { email: 'principal@greenfield.test', name: 'Dr. Shahin Alam', roles: ['custom:Principal'] },
       { email: 'accounts@greenfield.test', name: 'Nusrat Jahan', roles: ['accountant'] },
       { email: 'librarian@greenfield.test', name: 'Kamal Uddin', roles: ['librarian'] },
       { email: 'hr@greenfield.test', name: 'Sharmin Akter', roles: ['hr_staff'] },
+      { email: 'coordinator@greenfield.test', name: 'Kabir Hossain', roles: ['teacher', 'guardian'] },
       ...greenfieldTeachers,
       { email: SHARED_TEACHER.email, name: SHARED_TEACHER.name, roles: ['teacher'] },
       ...numbered('guardian', 'greenfield.test', 10, 3, ['guardian']),

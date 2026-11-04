@@ -55,6 +55,13 @@ flowchart TD
    - Non-escalation invariant: users cannot grant or revoke roles possessing privileges broader than their own.
    - School owner invariant: a school must always retain at least one active `school_owner`.
 
-3. **Background Jobs & Email**:
+3. **Role-Aware Workspaces & Data Scoping**:
+   - School subdomains (`{slug}.localhost`) deliver tailored workspaces based on the member's assigned roles.
+   - Teacher experiences are restricted to assigned classes and sections (`TeacherAssignment`).
+   - Student experiences are restricted to own enrolled profile (`StudentProfile`).
+   - Guardian experiences provide multi-child selection, strictly restricted to verified relationships (`GuardianStudent`).
+   - Multi-role members can switch presentation views without switching tenants or bypassing backend authorization.
+
+4. **Background Jobs & Email**:
    - Asynchronous queuing powered by BullMQ on Redis.
    - Transactional email dispatch for email verification, password reset, and member invitations.

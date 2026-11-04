@@ -42,6 +42,8 @@ export const ERROR_CODES = [
   'ROLE_NOT_FOUND',
   'ROLE_EXISTS',
   'ROLE_IN_USE',
+  'STUDENT_NOT_FOUND',
+  'CHILD_ACCESS_DENIED',
 
   // Academics
   'ACADEMIC_YEAR_NOT_FOUND',

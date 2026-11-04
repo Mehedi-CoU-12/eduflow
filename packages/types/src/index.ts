@@ -15,3 +15,4 @@ export * from './schools/reference-data.js';
 export * from './schools/schemas.js';
 export * from './schools/slug.js';
 export * from './tenancy/host.js';
+export * from './workspace/types.js';
