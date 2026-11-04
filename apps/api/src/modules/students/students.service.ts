@@ -401,4 +401,43 @@ export class StudentsService {
   /**
    * Section Rostering: Retrieves section roster with capacity metrics and enrolled students.
    */
+  async getSectionRoster(tenant: TenantContext, sectionId: string): Promise<SectionRosterDto> {
+    return this.db.withTenant(tenant, async (tx) => {
+      const section = await tx.db.section.findFirst({
+        where: { id: sectionId, schoolId: tx.schoolId },
+        include: { class: true },
+      });
+
+      if (!section) {
+        throw AppError.notFound('SECTION_NOT_FOUND', 'Section not found in this school');
+      }
+
+      const students = await tx.db.studentProfile.findMany({
+        where: { sectionId, schoolId: tx.schoolId, status: 'active' },
+        include: {
+          user: { select: { name: true, email: true, avatarUrl: true } },
+          class: { select: { name: true } },
+          section: { select: { name: true } },
+        },
+        orderBy: [{ rollNumber: 'asc' }, { admissionNumber: 'asc' }],
+      });
+
+      return {
+        section: {
+          sectionId: section.id,
+          sectionName: section.name,
+          classId: section.classId,
+          className: section.class.name,
+          classCode: section.class.code,
+          capacity: section.capacity,
+          enrolledCount: students.length,
+        },
+        students: students.map(toStudentProfileDto),
+      };
+    });
+  }
+
+  /**
+   * Section Rostering: Reassigns / transfers students between sections and classes.
+   */
 }
