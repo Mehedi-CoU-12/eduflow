@@ -62,3 +62,47 @@ export interface SectionRosterDto {
   students: StudentProfileDto[];
 }
 
+// -----------------------------------------------------------------------------
+// Faculty Assignment Schemas
+// -----------------------------------------------------------------------------
+
+export const createFacultyAssignmentSchema = z.object({
+  teacherUserId: uuidSchema,
+  sectionId: uuidSchema,
+  subjectId: uuidSchema.optional().nullable(),
+  isClassTeacher: z.boolean().default(false),
+});
+export type CreateFacultyAssignmentInput = z.infer<typeof createFacultyAssignmentSchema>;
+
+export const listFacultyAssignmentsQuerySchema = z.object({
+  teacherUserId: uuidSchema.optional(),
+  classId: uuidSchema.optional(),
+  sectionId: uuidSchema.optional(),
+  subjectId: uuidSchema.optional(),
+});
+export type ListFacultyAssignmentsQuery = z.infer<typeof listFacultyAssignmentsQuerySchema>;
+
+export interface FacultyAssignmentDetailDto {
+  id: string;
+  teacherUserId: string;
+  teacherName: string;
+  teacherEmail: string;
+  classId: string;
+  className: string;
+  classCode: string;
+  sectionId: string;
+  sectionName: string;
+  subjectId: string | null;
+  subjectName: string | null;
+  subjectCode: string | null;
+  isClassTeacher: boolean;
+  createdAt: string;
+}
+
+export interface EligibleTeacherDto {
+  userId: string;
+  name: string;
+  email: string;
+  assignmentCount: number;
+}
+
