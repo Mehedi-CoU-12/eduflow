@@ -48,6 +48,9 @@ model User {
   memberships        SchoolMembership[]
   platformMembership PlatformMembership?
   auditLogs          AuditLog[]
+  studentProfile     StudentProfile?
+  guardianStudents   GuardianStudent[]   @relation("GuardianUser")
+  teacherAssignments TeacherAssignment[]
 
   @@map("users")
 }
@@ -218,16 +221,19 @@ model School {
   createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  domains       SchoolDomain[]
-  memberships   SchoolMembership[]
-  roles         Role[]
-  sessions      Session[]
-  auditLogs     AuditLog[]
-  academicYears AcademicYear[]
-  terms         Term[]
-  classes       Class[]
-  sections      Section[]
-  subjects      Subject[]
+  domains            SchoolDomain[]
+  memberships        SchoolMembership[]
+  roles              Role[]
+  sessions           Session[]
+  auditLogs          AuditLog[]
+  academicYears      AcademicYear[]
+  terms              Term[]
+  classes            Class[]
+  sections           Section[]
+  subjects           Subject[]
+  students           StudentProfile[]
+  guardianStudents   GuardianStudent[]
+  teacherAssignments TeacherAssignment[]
 
   @@map("schools")
 }
@@ -415,8 +421,9 @@ model Class {
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  school   School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school   School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   sections Section[]
+  students StudentProfile[]
 
   @@unique([schoolId, name])
   @@unique([schoolId, code])
@@ -435,8 +442,10 @@ model Section {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  class  Class  @relation(fields: [classId, schoolId], references: [id, schoolId], onDelete: Cascade)
+  school             School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class              Class               @relation(fields: [classId, schoolId], references: [id, schoolId], onDelete: Cascade)
+  students           StudentProfile[]
+  teacherAssignments TeacherAssignment[]
 
   @@unique([classId, name])
   @@unique([id, schoolId])
@@ -456,9 +465,88 @@ model Subject {
   createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school             School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacherAssignments TeacherAssignment[]
 
   @@unique([schoolId, code])
   @@index([schoolId])
   @@map("subjects")
+}
+
+// -----------------------------------------------------------------------------
+// School Roles & Academic Relationships
+// -----------------------------------------------------------------------------
+
+/// A student profile associated with a school and user account.
+model StudentProfile {
+  id              String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  schoolId        String   @map("school_id") @db.Uuid
+  userId          String   @unique @map("user_id") @db.Uuid
+  classId         String   @map("class_id") @db.Uuid
+  sectionId       String   @map("section_id") @db.Uuid
+  admissionNumber String   @map("admission_number")
+  rollNumber      String?  @map("roll_number")
+  status          String   @default("active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  school    School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class     Class             @relation(fields: [classId, schoolId], references: [id, schoolId], onDelete: Cascade)
+  section   Section           @relation(fields: [sectionId, schoolId], references: [id, schoolId], onDelete: Cascade)
+  guardians GuardianStudent[]
+
+  @@unique([schoolId, admissionNumber])
+  @@unique([id, schoolId])
+  @@index([schoolId])
+  @@index([classId])
+  @@index([sectionId])
+  @@map("student_profiles")
+}
+
+/// Links a guardian user to their student children in a school.
+model GuardianStudent {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  schoolId       String   @map("school_id") @db.Uuid
+  guardianUserId String   @map("guardian_user_id") @db.Uuid
+  studentId      String   @map("student_id") @db.Uuid
+  relationship   String   @default("Parent")
+  isPrimary      Boolean  @default(true) @map("is_primary")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  school       School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  guardianUser User           @relation("GuardianUser", fields: [guardianUserId], references: [id], onDelete: Cascade)
+  student      StudentProfile @relation(fields: [studentId, schoolId], references: [id, schoolId], onDelete: Cascade)
+
+  @@unique([schoolId, guardianUserId, studentId])
+  @@unique([id, schoolId])
+  @@index([schoolId])
+  @@index([guardianUserId])
+  @@index([studentId])
+  @@map("guardian_students")
+}
+
+/// Teacher assignment to a section and optionally a subject.
+model TeacherAssignment {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  schoolId       String   @map("school_id") @db.Uuid
+  teacherUserId  String   @map("teacher_user_id") @db.Uuid
+  sectionId      String   @map("section_id") @db.Uuid
+  subjectId      String?  @map("subject_id") @db.Uuid
+  isClassTeacher Boolean  @default(false) @map("is_class_teacher")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacherUser User     @relation(fields: [teacherUserId], references: [id], onDelete: Cascade)
+  section     Section  @relation(fields: [sectionId, schoolId], references: [id, schoolId], onDelete: Cascade)
+  subject     Subject? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, teacherUserId, sectionId, subjectId])
+  @@unique([id, schoolId])
+  @@index([schoolId])
+  @@index([teacherUserId])
+  @@index([sectionId])
+  @@map("teacher_assignments")
 }
