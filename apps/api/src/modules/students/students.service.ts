@@ -355,4 +355,50 @@ export class StudentsService {
   /**
    * Updates student details (e.g. roll number or status).
    */
+  async updateStudent(
+    tenant: TenantContext,
+    studentId: string,
+    input: UpdateStudentProfileInput,
+    meta: RequestMeta,
+  ): Promise<StudentProfileDto> {
+    return this.db.withTenant(tenant, async (tx) => {
+      const existing = await tx.db.studentProfile.findFirst({
+        where: { id: studentId, schoolId: tx.schoolId },
+      });
+      if (!existing) {
+        throw AppError.notFound('STUDENT_NOT_FOUND', 'Student record not found in this school');
+      }
+
+      const updated = await tx.db.studentProfile.update({
+        where: { id: studentId },
+        data: {
+          ...(input.rollNumber !== undefined ? { rollNumber: input.rollNumber } : {}),
+          ...(input.status ? { status: input.status } : {}),
+        },
+        include: {
+          user: { select: { name: true, email: true, avatarUrl: true } },
+          class: { select: { name: true } },
+          section: { select: { name: true } },
+        },
+      });
+
+      await this.audit.record(
+        tx,
+        {
+          action: 'student.updated',
+          entityType: 'student_profile',
+          entityId: studentId,
+          before: existing,
+          after: updated,
+        },
+        meta,
+      );
+
+      return toStudentProfileDto(updated);
+    });
+  }
+
+  /**
+   * Section Rostering: Retrieves section roster with capacity metrics and enrolled students.
+   */
 }
