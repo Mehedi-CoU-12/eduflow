@@ -3,8 +3,14 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
-import type { MemberDto, RoleDto } from '@eduflow/types';
-import { UserPlus, Search, AlertCircle, X } from 'lucide-react';
+import type {
+  GuardianLinkDetailDto,
+  LinkGuardianStudentInput,
+  MemberDto,
+  RoleDto,
+  StudentProfileDto,
+} from '@eduflow/types';
+import { UserPlus, Search, AlertCircle, X, Heart, Trash2, CheckCircle, Plus } from 'lucide-react';
 
 export default function MembersPage() {
   const queryClient = useQueryClient();
@@ -21,6 +27,9 @@ export default function MembersPage() {
   const [editingMember, setEditingMember] = useState<MemberDto | null>(null);
   const [editRoleIds, setEditRoleIds] = useState<string[]>([]);
   const [editError, setEditError] = useState<string | null>(null);
+
+  // Guardian management modal
+  const [managingGuardianMember, setManagingGuardianMember] = useState<MemberDto | null>(null);
 
   const { data: membersData, isLoading: membersLoading } = useQuery<{ items: MemberDto[] }>({
     queryKey: ['members', search],
@@ -241,6 +250,16 @@ export default function MembersPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {member.roles.some((r) => r.key === 'guardian') && (
+                          <button
+                            onClick={() => setManagingGuardianMember(member)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded border border-teal-300 bg-teal-50 text-teal-800 hover:bg-teal-100 transition shadow-2xs"
+                            title="Manage Linked Children"
+                          >
+                            <Heart className="w-3 h-3 text-teal-600" />
+                            Children
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setEditingMember(member);
@@ -450,6 +469,16 @@ export default function MembersPage() {
           </div>
         </div>
       )}
+
+      {/* Guardian Children Management Modal */}
+      {managingGuardianMember && (
+        <GuardianChildrenModal
+          member={managingGuardianMember}
+          onClose={() => setManagingGuardianMember(null)}
+        />
+      )}
     </div>
   );
 }
+
+function GuardianChildrenModal({ member, onClose }: { member: any; onClose: () => void }) { return null; }
