@@ -217,4 +217,77 @@ export class FacultyService {
   /**
    * Removes a faculty assignment.
    */
+  async deleteAssignment(tenant: TenantContext, id: string, meta: RequestMeta): Promise<void> {
+    return this.db.withTenant(tenant, async (tx) => {
+      const existing = await tx.db.teacherAssignment.findFirst({
+        where: { id, schoolId: tx.schoolId },
+        include: {
+          teacherUser: { select: { name: true } },
+          section: { select: { name: true } },
+        },
+      });
+
+      if (!existing) {
+        throw AppError.notFound('TEACHER_ASSIGNMENT_NOT_FOUND', 'Faculty assignment record not found');
+      }
+
+      await tx.db.teacherAssignment.delete({
+        where: { id },
+      });
+
+      await this.audit.record(
+        tx,
+        {
+          action: 'faculty.unassigned',
+          entityType: 'teacher_assignment',
+          entityId: id,
+          before: {
+            teacher: existing.teacherUser.name,
+            section: existing.section.name,
+          },
+        },
+        meta,
+      );
+    });
+  }
+
+  /**
+   * Returns list of eligible faculty members (active members with teacher role).
+   */
+  async listEligibleTeachers(tenant: TenantContext): Promise<EligibleTeacherDto[]> {
+    return this.db.withTenant(tenant, async (tx) => {
+      const teachers = await tx.db.schoolMembership.findMany({
+        where: {
+          schoolId: tx.schoolId,
+          status: 'active',
+          roles: {
+            some: {
+              role: {
+                key: 'teacher',
+              },
+            },
+          },
+        },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { user: { name: 'asc' } },
+      });
+
+      const counts = await tx.db.teacherAssignment.groupBy({
+        by: ['teacherUserId'],
+        where: { schoolId: tx.schoolId },
+        _count: { id: true },
+      });
+
+      const countMap = new Map(counts.map((c) => [c.teacherUserId, c._count.id]));
+
+      return teachers.map((t) => ({
+        userId: t.user.id,
+        name: t.user.name,
+        email: t.user.email,
+        assignmentCount: countMap.get(t.user.id) ?? 0,
+      }));
+    });
+  }
 }
