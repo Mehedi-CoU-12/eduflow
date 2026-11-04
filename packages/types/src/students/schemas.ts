@@ -106,3 +106,29 @@ export interface EligibleTeacherDto {
   assignmentCount: number;
 }
 
+// -----------------------------------------------------------------------------
+// Guardian Relationship Linking Schemas
+// -----------------------------------------------------------------------------
+
+export const linkGuardianStudentSchema = z.object({
+  studentId: uuidSchema,
+  relationship: z.string().trim().min(1).max(50).default('Parent'),
+  isPrimary: z.boolean().default(true),
+});
+export type LinkGuardianStudentInput = z.infer<typeof linkGuardianStudentSchema>;
+
+export interface GuardianLinkDetailDto {
+  id: string;
+  guardianUserId: string;
+  guardianName: string;
+  guardianEmail: string;
+  studentId: string;
+  studentName: string;
+  studentAdmissionNumber: string;
+  studentRollNumber: string | null;
+  className: string;
+  sectionName: string;
+  relationship: string;
+  isPrimary: boolean;
+  createdAt: string;
+}
