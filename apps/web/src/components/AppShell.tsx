@@ -1,12 +1,14 @@
 'use client';
 
 import React, { Suspense } from 'react';
+import { usePathname } from 'next/navigation';
 import { useSession } from '@/lib/session';
 import { Navbar } from './Navbar';
 import { WorkspaceLayout } from './workspace/WorkspaceLayout';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { session, publicTenant, loading } = useSession();
+  const { session, publicTenant } = useSession();
+  const pathname = usePathname();
 
   const hostKind = publicTenant?.host ?? session?.host ?? 'root';
   const isSchoolMember = hostKind === 'school' && Boolean(session?.tenant);
@@ -24,6 +26,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <WorkspaceLayout>{children}</WorkspaceLayout>
       </Suspense>
     );
+  }
+
+  // If on the public marketing landing page (unauthenticated root domain visitor at "/")
+  const isMarketingLanding = hostKind === 'root' && !session && pathname === '/';
+  if (isMarketingLanding) {
+    return <>{children}</>;
   }
 
   return (
