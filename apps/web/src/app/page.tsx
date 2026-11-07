@@ -14,20 +14,12 @@ import type {
   WorkspaceType,
 } from '@eduflow/types';
 import {
-  Shield,
   School,
   ArrowRight,
   Plus,
-  Users,
-  Settings,
-  Clock,
-  CheckCircle,
-  Building2,
-  Sparkles,
-  BookOpen,
 } from 'lucide-react';
 
-import { WorkspaceLayout } from '@/components/workspace/WorkspaceLayout';
+import { LandingPage } from '@/components/landing/LandingPage';
 import { AdminDashboard } from '@/components/workspace/dashboards/AdminDashboard';
 import { TeacherDashboard } from '@/components/workspace/dashboards/TeacherDashboard';
 import { StudentDashboard } from '@/components/workspace/dashboards/StudentDashboard';
@@ -307,65 +299,7 @@ function RootView() {
   });
 
   if (!session) {
-    return (
-      <div className="py-12 md:py-20 text-center">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-xs font-semibold text-teal-800 mb-6">
-          <Sparkles className="w-4 h-4 text-teal-600" />
-          Multi-Tenant Educational ERP
-        </div>
-        <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight max-w-3xl mx-auto leading-tight">
-          Enterprise School Management with Strict Tenant Isolation
-        </h1>
-        <p className="mt-6 text-lg text-slate-600 max-w-2xl mx-auto">
-          Powered by PostgreSQL Row Level Security, 3-tier database roles, host-based routing, and fine-grained access control.
-        </p>
-
-        <div className="mt-10 flex items-center justify-center gap-4">
-          <Link
-            href="/signup"
-            className="px-6 py-3 rounded-xl font-semibold text-white bg-teal-700 hover:bg-teal-800 shadow-md transition flex items-center gap-2"
-          >
-            Create Your School <ArrowRight className="w-4 h-4" />
-          </Link>
-          <Link
-            href="/login"
-            className="px-6 py-3 rounded-xl font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition"
-          >
-            Sign In
-          </Link>
-        </div>
-
-        <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 text-left max-w-5xl mx-auto">
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <div className="w-10 h-10 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center mb-4">
-              <Shield className="w-5 h-5" />
-            </div>
-            <h3 className="font-semibold text-slate-900">PostgreSQL RLS Boundaries</h3>
-            <p className="text-sm text-slate-500 mt-2">
-              Every query executes under transaction-scoped tenant context with dual app/system database roles.
-            </p>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <div className="w-10 h-10 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center mb-4">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <h3 className="font-semibold text-slate-900">Subdomain & Domain Multi-Tenancy</h3>
-            <p className="text-sm text-slate-500 mt-2">
-              Automatic routing for schools on dedicated subdomains ({'<slug>'}.localhost) and verified custom domains.
-            </p>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <div className="w-10 h-10 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center mb-4">
-              <CheckCircle className="w-5 h-5" />
-            </div>
-            <h3 className="font-semibold text-slate-900">Append-Only Audit Logs</h3>
-            <p className="text-sm text-slate-500 mt-2">
-              Database trigger-enforced immutable logs ensuring full operational traceability and compliance.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LandingPage />;
   }
 
   return (
