@@ -14,6 +14,6 @@ import { UserProvisioningService } from './user-provisioning.service.js';
   imports: [TenancyModule, PlatformModule],
   controllers: [AuthController],
   providers: [AuthService, AuthTokenService, LoginThrottleService, PasswordService, SessionService, UserProvisioningService],
-  exports: [SessionService, PasswordService, UserProvisioningService],
+  exports: [SessionService, PasswordService, UserProvisioningService, AuthTokenService],
 })
 export class AuthModule {}
