@@ -108,6 +108,9 @@ export function WorkspaceLayout({
     breadcrumbs.push({ label: segment.charAt(0).toUpperCase() + segment.slice(1) });
   }
 
+  const searchString = searchParams?.toString();
+  const currentFullPath = searchString ? `${pathname}?${searchString}` : (pathname || '/');
+
   return (
     <div className="min-h-screen bg-slate-50/60 flex flex-col">
       {/* Sidebar */}
@@ -115,7 +118,7 @@ export function WorkspaceLayout({
         schoolName={school?.name || 'EduFlow School'}
         schoolSlug={school?.slug || 'portal'}
         sections={navigationSections}
-        currentPath={pathname || '/'}
+        currentPath={currentFullPath}
         isOpen={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
       />

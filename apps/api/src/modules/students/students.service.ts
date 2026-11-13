@@ -35,9 +35,11 @@ interface StudentRowWithRelations {
   admissionNumber: string;
   rollNumber: string | null;
   status: string;
+  createdAt?: Date;
   user: {
     name: string;
     email: string;
+    phone?: string | null;
     avatarUrl: string | null;
     emailVerifiedAt?: Date | null;
   };
@@ -55,6 +57,7 @@ function toStudentProfileDto(row: StudentRowWithRelations): StudentProfileDto {
     userId: row.userId,
     name: row.user.name,
     email: row.user.email,
+    phone: row.user.phone,
     avatarUrl: row.user.avatarUrl,
     admissionNumber: row.admissionNumber,
     rollNumber: row.rollNumber,
@@ -64,6 +67,7 @@ function toStudentProfileDto(row: StudentRowWithRelations): StudentProfileDto {
     sectionName: row.section.name,
     status: row.status,
     emailVerified: Boolean(row.user.emailVerifiedAt),
+    createdAt: row.createdAt ? row.createdAt.toISOString() : undefined,
   };
 }
 
@@ -233,7 +237,7 @@ export class StudentsService {
           status: 'active',
         },
         include: {
-          user: { select: { name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
+          user: { select: { name: true, email: true, phone: true, avatarUrl: true, emailVerifiedAt: true } },
           class: { select: { name: true } },
           section: { select: { name: true } },
         },
@@ -407,7 +411,7 @@ export class StudentsService {
       const rows = await tx.db.studentProfile.findMany({
         where,
         include: {
-          user: { select: { name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
+          user: { select: { name: true, email: true, phone: true, avatarUrl: true, emailVerifiedAt: true } },
           class: { select: { name: true } },
           section: { select: { name: true } },
         },
@@ -432,7 +436,7 @@ export class StudentsService {
       const row = await tx.db.studentProfile.findFirst({
         where: { id: studentId, schoolId: tx.schoolId },
         include: {
-          user: { select: { name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
+          user: { select: { name: true, email: true, phone: true, avatarUrl: true, emailVerifiedAt: true } },
           class: { select: { name: true } },
           section: { select: { name: true } },
         },
@@ -470,7 +474,7 @@ export class StudentsService {
           ...(input.status ? { status: input.status } : {}),
         },
         include: {
-          user: { select: { name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
+          user: { select: { name: true, email: true, phone: true, avatarUrl: true, emailVerifiedAt: true } },
           class: { select: { name: true } },
           section: { select: { name: true } },
         },
@@ -535,7 +539,7 @@ export class StudentsService {
       const updated = await tx.db.studentProfile.findFirst({
         where: { id: studentId, schoolId: tx.schoolId },
         include: {
-          user: { select: { name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
+          user: { select: { name: true, email: true, phone: true, avatarUrl: true, emailVerifiedAt: true } },
           class: { select: { name: true } },
           section: { select: { name: true } },
         },
@@ -562,7 +566,7 @@ export class StudentsService {
       const students = await tx.db.studentProfile.findMany({
         where: { sectionId, schoolId: tx.schoolId, status: 'active' },
         include: {
-          user: { select: { name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
+          user: { select: { name: true, email: true, phone: true, avatarUrl: true, emailVerifiedAt: true } },
           class: { select: { name: true } },
           section: { select: { name: true } },
         },

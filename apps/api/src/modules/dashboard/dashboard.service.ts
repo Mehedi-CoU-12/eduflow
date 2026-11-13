@@ -381,11 +381,21 @@ export class DashboardService {
         orderBy: { name: 'asc' },
       });
 
+      // Fetch linked guardians for this student
+      const guardianLinks = (await tx.db.guardianStudent?.findMany?.({
+        where: { studentId: studentProfile.id, schoolId: tx.schoolId },
+        include: {
+          guardianUser: { select: { id: true, name: true, email: true, phone: true } },
+        },
+        orderBy: [{ isPrimary: 'desc' }],
+      })) ?? [];
+
       const studentDto: StudentProfileDto = {
         id: studentProfile.id,
         userId: studentProfile.userId,
         name: studentProfile.user.name,
         email: studentProfile.user.email,
+        phone: studentProfile.user.phone,
         avatarUrl: studentProfile.user.avatarUrl,
         admissionNumber: studentProfile.admissionNumber,
         rollNumber: studentProfile.rollNumber,
@@ -394,6 +404,8 @@ export class DashboardService {
         sectionId: studentProfile.sectionId,
         sectionName: studentProfile.section.name,
         status: studentProfile.status,
+        emailVerified: Boolean(studentProfile.user.emailVerifiedAt),
+        createdAt: studentProfile.createdAt ? studentProfile.createdAt.toISOString() : undefined,
       };
 
       const timetable: TimetableEntry[] = subjects.slice(0, 4).map((sub, idx) => ({
@@ -427,6 +439,15 @@ export class DashboardService {
 
       return {
         student: studentDto,
+        guardians: guardianLinks.map((g: any) => ({
+          id: g.id,
+          guardianUserId: g.guardianUserId,
+          name: g.guardianUser?.name || 'Parent / Guardian',
+          email: g.guardianUser?.email || '',
+          phone: g.guardianUser?.phone || null,
+          relationship: g.relationship || 'Guardian',
+          isPrimary: Boolean(g.isPrimary),
+        })),
         metrics: {
           attendancePercentage: 96.5,
           pendingHomework: 2,

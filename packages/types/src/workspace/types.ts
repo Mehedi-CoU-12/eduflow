@@ -116,6 +116,7 @@ export interface StudentProfileDto {
   userId: string;
   name: string;
   email: string;
+  phone?: string | null;
   avatarUrl?: string | null;
   admissionNumber: string;
   rollNumber: string | null;
@@ -125,6 +126,17 @@ export interface StudentProfileDto {
   sectionName: string;
   status: string;
   emailVerified?: boolean;
+  createdAt?: string;
+}
+
+export interface StudentGuardianDto {
+  id: string;
+  guardianUserId: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  relationship: string;
+  isPrimary: boolean;
 }
 
 export interface SubjectItem {
@@ -137,6 +149,7 @@ export interface SubjectItem {
 
 export interface StudentDashboardDto {
   student: StudentProfileDto;
+  guardians?: StudentGuardianDto[];
   metrics: {
     attendancePercentage: number;
     pendingHomework: number;

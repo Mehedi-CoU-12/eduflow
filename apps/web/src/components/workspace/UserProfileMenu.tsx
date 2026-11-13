@@ -117,12 +117,32 @@ export function UserProfileMenu({
 
           <div className="py-1">
             <Link
-              href="/settings"
+              href={
+                currentWorkspace === 'student'
+                  ? '/?workspace=student&tab=profile'
+                  : currentWorkspace === 'guardian'
+                  ? '/?workspace=guardian&tab=children'
+                  : '/settings'
+              }
               onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
             >
-              <Settings className="w-4 h-4 text-slate-400" />
-              Settings & Profile
+              {currentWorkspace === 'student' ? (
+                <>
+                  <User className="w-4 h-4 text-slate-400" />
+                  My Student Profile
+                </>
+              ) : currentWorkspace === 'guardian' ? (
+                <>
+                  <User className="w-4 h-4 text-slate-400" />
+                  Family & Children Profile
+                </>
+              ) : (
+                <>
+                  <Settings className="w-4 h-4 text-slate-400" />
+                  Settings & Profile
+                </>
+              )}
             </Link>
           </div>
 

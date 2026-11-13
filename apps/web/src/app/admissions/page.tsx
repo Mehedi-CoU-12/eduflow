@@ -11,15 +11,21 @@ import type {
 import {
   AlertCircle,
   CheckCircle,
+  Edit3,
+  Eye,
   GraduationCap,
   Layers,
-  Plus,
   Search,
-  UserCheck,
   UserPlus,
   Users,
   X,
 } from 'lucide-react';
+import {
+  StudentDetailsModal,
+  EditStudentModal,
+  LinkGuardianToStudentModal,
+} from './components';
+import Image from 'next/image';
 
 export default function AdmissionsPage() {
   const queryClient = useQueryClient();
@@ -34,6 +40,11 @@ export default function AdmissionsPage() {
   const [showAdmitModal, setShowAdmitModal] = useState(false);
   const [admitSuccessStudent, setAdmitSuccessStudent] = useState<StudentProfileDto | null>(null);
   const [admitError, setAdmitError] = useState<string | null>(null);
+
+  // Student Account Action Modals
+  const [selectedStudentForDetails, setSelectedStudentForDetails] = useState<StudentProfileDto | null>(null);
+  const [editingStudent, setEditingStudent] = useState<StudentProfileDto | null>(null);
+  const [linkingGuardianStudent, setLinkingGuardianStudent] = useState<StudentProfileDto | null>(null);
 
   // Form State
   const [formData, setFormData] = useState<{
@@ -340,10 +351,13 @@ export default function AdmissionsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-teal-100 border border-teal-200 text-teal-800 flex items-center justify-center font-bold text-sm shrink-0">
+                      <div
+                        onClick={() => setSelectedStudentForDetails(student)}
+                        className="flex items-center gap-3 cursor-pointer group"
+                      >
+                        <div className="w-9 h-9 rounded-full bg-teal-100 border border-teal-200 text-teal-800 flex items-center justify-center font-bold text-sm shrink-0 group-hover:ring-2 group-hover:ring-teal-700/30 transition">
                           {student.avatarUrl ? (
-                            <img
+                            <Image
                               src={student.avatarUrl}
                               alt={student.name}
                               className="w-full h-full rounded-full object-cover"
@@ -353,7 +367,7 @@ export default function AdmissionsPage() {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <div className="font-semibold text-slate-900 text-sm leading-tight truncate">
+                          <div className="font-semibold text-slate-900 text-sm leading-tight truncate group-hover:text-teal-700 transition">
                             {student.name}
                           </div>
                           <div className="flex items-center gap-1.5 mt-0.5">
@@ -398,16 +412,32 @@ export default function AdmissionsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {!student.emailVerified && (
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => handleVerifyStudent(student)}
-                          disabled={verifyStudentEmailMutation.isPending}
-                          className="px-2.5 py-1 text-xs font-semibold rounded border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition shadow-2xs disabled:opacity-50"
-                          title="Manually verify email address"
+                          onClick={() => setSelectedStudentForDetails(student)}
+                          className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-teal-700 hover:bg-slate-100 transition shadow-2xs"
+                          title="View Student Account Details"
                         >
-                          Verify Email
+                          <Eye className="w-3.5 h-3.5" />
                         </button>
-                      )}
+                        <button
+                          onClick={() => setEditingStudent(student)}
+                          className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-teal-700 hover:bg-slate-100 transition shadow-2xs"
+                          title="Edit Student Account"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        {!student.emailVerified && (
+                          <button
+                            onClick={() => handleVerifyStudent(student)}
+                            disabled={verifyStudentEmailMutation.isPending}
+                            className="px-2.5 py-1 text-xs font-semibold rounded border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition shadow-2xs disabled:opacity-50"
+                            title="Manually verify email address"
+                          >
+                            Verify Email
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -652,6 +682,44 @@ export default function AdmissionsPage() {
           </div>
         </div>
       )}
+
+      {/* Student Details Modal */}
+      <StudentDetailsModal
+        student={selectedStudentForDetails}
+        onClose={() => setSelectedStudentForDetails(null)}
+        onEdit={(std) => {
+          setSelectedStudentForDetails(null);
+          setEditingStudent(std);
+        }}
+        onLinkGuardian={(std) => {
+          setLinkingGuardianStudent(std);
+        }}
+        onVerifyEmail={handleVerifyStudent}
+        verifyingEmail={verifyStudentEmailMutation.isPending}
+      />
+
+      {/* Edit Student Account Modal */}
+      <EditStudentModal
+        student={editingStudent}
+        onClose={() => setEditingStudent(null)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['students'] });
+        }}
+      />
+
+      {/* Link Guardian To Student Modal */}
+      <LinkGuardianToStudentModal
+        student={linkingGuardianStudent}
+        onClose={() => setLinkingGuardianStudent(null)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['students'] });
+          if (selectedStudentForDetails) {
+            queryClient.invalidateQueries({
+              queryKey: ['students', selectedStudentForDetails.id, 'guardians'],
+            });
+          }
+        }}
+      />
     </div>
   );
 }
