@@ -111,7 +111,7 @@ export interface MyMembershipDto {
 export interface MemberDto {
   id: string;
   status: MembershipStatus;
-  user: Pick<UserDto, 'id' | 'name' | 'email' | 'avatarUrl'>;
+  user: Pick<UserDto, 'id' | 'name' | 'email' | 'avatarUrl' | 'emailVerified'>;
   roles: RoleSummaryDto[];
   createdAt: string;
 }

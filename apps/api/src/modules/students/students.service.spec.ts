@@ -6,6 +6,9 @@ import type { SystemDatabase } from '../../infrastructure/database/system-databa
 import type { AuditService } from '../audit/audit.service.js';
 import type { UserProvisioningService } from '../auth/user-provisioning.service.js';
 import type { PasswordService } from '../auth/password.service.js';
+import type { MailService } from '../../infrastructure/mail/mail.service.js';
+import type { AuthTokenService } from '../auth/auth-token.service.js';
+import type { AppConfig } from '../../config/env.js';
 import { AppError } from '../../common/errors/app-error.js';
 import type { RequestMeta } from '../../common/http/request-context.js';
 
@@ -46,12 +49,15 @@ describe('StudentsService', () => {
   let mockAudit: AuditService;
   let mockUserProvisioning: UserProvisioningService;
   let mockPasswordService: PasswordService;
+  let mockMail: MailService;
+  let mockTokens: AuthTokenService;
+  let mockConfig: AppConfig;
 
   const fakeTenant = {
     schoolId: '018f3a2b-4c5d-7e8f-9a0b-1c2d3e4f5a6b',
     userId: '018f3a2b-4c5d-7e8f-9a0b-1c2d3e4f5a6d',
     membershipId: '018f3a2b-4c5d-7e8f-9a0b-1c2d3e4f5a6c',
-    school: { id: '018f3a2b-4c5d-7e8f-9a0b-1c2d3e4f5a6b' },
+    school: { id: '018f3a2b-4c5d-7e8f-9a0b-1c2d3e4f5a6b', slug: 'greenwood', defaultLocale: 'en' },
     roles: [{ id: 'role-admin', key: 'school_admin', name: 'School Admin' }],
     permissions: { has: () => true, covers: () => true, hasAll: () => true },
   } as unknown as TenantContext;
@@ -99,6 +105,10 @@ describe('StudentsService', () => {
 
     mockSystemDb = {
       client: {
+        user: {
+          findUnique: jest.fn<() => Promise<unknown>>().mockResolvedValue({ id: 'user-new-student', emailVerifiedAt: null }),
+          update: jest.fn<() => Promise<unknown>>().mockResolvedValue({ id: 'user-new-student' }),
+        },
         userCredential: {
           findUnique: jest.fn<() => Promise<unknown>>().mockResolvedValue(null),
           create: jest.fn<() => Promise<unknown>>().mockResolvedValue({ id: 'cred-1' }),
@@ -112,8 +122,10 @@ describe('StudentsService', () => {
 
     mockUserProvisioning = {
       findOrCreateForInvite: jest.fn<() => Promise<unknown>>().mockResolvedValue({
-        user: { id: 'user-new-student', email: 'student@example.com', name: 'Alice Student' },
-        isNewUser: true,
+        id: 'user-new-student',
+        email: 'student@example.com',
+        name: 'Alice Student',
+        hasCredential: false,
       }),
     } as unknown as UserProvisioningService;
 
@@ -122,12 +134,31 @@ describe('StudentsService', () => {
       generateTemporary: jest.fn<() => string>().mockReturnValue('TempPass123!'),
     } as unknown as PasswordService;
 
+    mockMail = {
+      send: jest.fn<() => Promise<void>>().mockResolvedValue(),
+    } as unknown as MailService;
+
+    mockTokens = {
+      issue: jest.fn<() => Promise<string>>().mockResolvedValue('mock-verification-token'),
+      consume: jest.fn<() => Promise<string | null>>().mockResolvedValue('user-new-student'),
+    } as unknown as AuthTokenService;
+
+    mockConfig = {
+      hosts: {
+        publicUrl: 'http://localhost:3100',
+        baseDomain: 'localhost',
+      },
+    } as unknown as AppConfig;
+
     service = new StudentsService(
       mockDb,
       mockSystemDb,
       mockAudit,
       mockUserProvisioning,
       mockPasswordService,
+      mockMail,
+      mockTokens,
+      mockConfig,
     );
   });
 
@@ -192,6 +223,59 @@ describe('StudentsService', () => {
       expect(result.name).toBe('Alice Student');
       expect(result.admissionNumber).toBe('ADM-2026-0001');
       expect(mockAudit.record).toHaveBeenCalled();
+      expect(mockTokens.issue).toHaveBeenCalledWith('user-new-student', 'email_verification', expect.any(Number));
+      expect(mockMail.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'student@example.com',
+          template: 'verifyEmail',
+        }),
+      );
+    });
+
+    it('verifies email immediately when requested', async () => {
+      fakeTx.db.class.findFirst.mockResolvedValue({ id: 'class-1', name: 'Class 8', schoolId: fakeTenant.schoolId });
+      fakeTx.db.section.findFirst.mockResolvedValue({ id: 'section-1', classId: 'class-1', name: 'Section A', capacity: 40, schoolId: fakeTenant.schoolId });
+      fakeTx.db.studentProfile.count.mockResolvedValue(0);
+      fakeTx.db.role.findFirst.mockResolvedValue({ id: 'role-student', key: 'student' });
+      fakeTx.db.schoolMembership.upsert.mockResolvedValue({ id: 'membership-student' });
+      fakeTx.db.membershipRole.create.mockResolvedValue({ id: 'mr-1' });
+      fakeTx.db.studentProfile.create.mockResolvedValue({
+        id: 'sp-1',
+        userId: 'user-new-student',
+        classId: 'class-1',
+        sectionId: 'section-1',
+        admissionNumber: 'ADM-2026-0001',
+        rollNumber: '01',
+        status: 'active',
+        user: { name: 'Alice Student', email: 'student@example.com', avatarUrl: null, emailVerifiedAt: new Date() },
+        class: { name: 'Class 8' },
+        section: { name: 'Section A' },
+      });
+
+      await service.admitStudent(
+        fakeTenant,
+        {
+          name: 'Alice Student',
+          email: 'student@example.com',
+          classId: 'class-1',
+          sectionId: 'section-1',
+          verifyEmailImmediately: true,
+        },
+        fakeMeta,
+      );
+
+      expect(mockSystemDb.client.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-new-student' },
+          data: expect.objectContaining({ emailVerifiedAt: expect.any(Date) }),
+        }),
+      );
+      expect(mockMail.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'student@example.com',
+          template: 'schoolInvite',
+        }),
+      );
     });
 
     it('rejects if class is not found', async () => {
@@ -443,6 +527,35 @@ describe('StudentsService', () => {
           fakeMeta,
         ),
       ).rejects.toThrow(AppError);
+    });
+  });
+
+  describe('verifyStudentEmail', () => {
+    it('manually verifies student user email', async () => {
+      fakeTx.db.studentProfile.findFirst.mockResolvedValue({
+        id: 'sp-1',
+        userId: 'user-new-student',
+        schoolId: fakeTenant.schoolId,
+        admissionNumber: 'ADM-2026-0001',
+        rollNumber: '01',
+        status: 'active',
+        classId: 'class-1',
+        sectionId: 'section-1',
+        user: { name: 'Alice Student', email: 'student@example.com', avatarUrl: null, emailVerifiedAt: null },
+        class: { name: 'Class 8' },
+        section: { name: 'Section A' },
+      });
+
+      const updated = await service.verifyStudentEmail(fakeTenant, 'sp-1', fakeMeta);
+
+      expect(mockSystemDb.client.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-new-student' },
+          data: expect.objectContaining({ emailVerifiedAt: expect.any(Date) }),
+        }),
+      );
+      expect(mockAudit.record).toHaveBeenCalled();
+      expect(updated.id).toBe('sp-1');
     });
   });
 });

@@ -62,9 +62,25 @@ export default function MembersPage() {
     onError: (err: Error) => alert(err.message),
   });
 
+  const verifyEmailMutation = useMutation({
+    mutationFn: (memberId: string) =>
+      apiFetch(`/members/${memberId}/verify-email`, {
+        method: 'POST',
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['members'] });
+    },
+    onError: (err: Error) => alert(err.message),
+  });
+
   const handleToggleStatus = (member: MemberDto) => {
     const nextStatus = member.status === 'active' ? 'suspended' : 'active';
     toggleStatusMutation.mutate({ memberId: member.id, status: nextStatus });
+  };
+
+  const handleVerifyEmail = (member: MemberDto) => {
+    if (!confirm(`Manually verify email address for ${member.user.name} (${member.user.email})?`)) return;
+    verifyEmailMutation.mutate(member.id);
   };
 
   const handleRemove = (member: MemberDto) => {
@@ -84,6 +100,7 @@ export default function MembersPage() {
         onManageChildren={(member) => setManagingGuardianMember(member)}
         onEditRoles={(member) => setEditingMember(member)}
         onToggleStatus={handleToggleStatus}
+        onVerifyEmail={handleVerifyEmail}
         onRemove={handleRemove}
       />
 

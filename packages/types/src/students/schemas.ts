@@ -17,6 +17,7 @@ export const admitStudentSchema = z.object({
   initialPassword: z.string().min(8).max(128).optional(),
   guardianEmail: z.string().trim().toLowerCase().max(254).pipe(z.email()).optional().nullable(),
   guardianRelationship: z.string().trim().max(50).optional().nullable(),
+  verifyEmailImmediately: z.boolean().optional(),
 });
 export type AdmitStudentInput = z.infer<typeof admitStudentSchema>;
 

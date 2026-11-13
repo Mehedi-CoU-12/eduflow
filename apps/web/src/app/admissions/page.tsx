@@ -47,6 +47,7 @@ export default function AdmissionsPage() {
     initialPassword: string;
     guardianEmail: string;
     guardianRelationship: string;
+    verifyEmailImmediately: boolean;
   }>({
     name: '',
     email: '',
@@ -58,6 +59,7 @@ export default function AdmissionsPage() {
     initialPassword: '',
     guardianEmail: '',
     guardianRelationship: 'Parent',
+    verifyEmailImmediately: false,
   });
 
   // Queries
@@ -99,6 +101,7 @@ export default function AdmissionsPage() {
         initialPassword: '',
         guardianEmail: '',
         guardianRelationship: 'Parent',
+        verifyEmailImmediately: false,
       });
       setAdmitError(null);
     },
@@ -106,6 +109,22 @@ export default function AdmissionsPage() {
       setAdmitError(err.message);
     },
   });
+
+  const verifyStudentEmailMutation = useMutation({
+    mutationFn: (studentId: string) =>
+      apiFetch(`/students/${studentId}/verify-email`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    },
+    onError: (err: Error) => alert(err.message),
+  });
+
+  const handleVerifyStudent = (student: StudentProfileDto) => {
+    if (!confirm(`Manually verify email address for ${student.name} (${student.email})?`)) return;
+    verifyStudentEmailMutation.mutate(student.id);
+  };
 
   const handleClassChange = (classId: string) => {
     setFormData((prev) => ({ ...prev, classId, sectionId: '' }));
@@ -135,6 +154,7 @@ export default function AdmissionsPage() {
       initialPassword: formData.initialPassword.trim() || undefined,
       guardianEmail: formData.guardianEmail.trim() || undefined,
       guardianRelationship: formData.guardianRelationship.trim() || undefined,
+      verifyEmailImmediately: formData.verifyEmailImmediately,
     };
 
     admitMutation.mutate(payload);
@@ -295,18 +315,19 @@ export default function AdmissionsPage() {
                 <th className="px-6 py-3.5">Class & Section</th>
                 <th className="px-6 py-3.5">Roll #</th>
                 <th className="px-6 py-3.5">Status</th>
+                <th className="px-6 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {studentsLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
                     Loading student admissions...
                   </td>
                 </tr>
               ) : students.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
                     No admitted students found matching the selected filters.
                   </td>
                 </tr>
@@ -320,7 +341,7 @@ export default function AdmissionsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-teal-100 border border-teal-200 text-teal-800 flex items-center justify-center font-bold text-sm">
+                        <div className="w-9 h-9 rounded-full bg-teal-100 border border-teal-200 text-teal-800 flex items-center justify-center font-bold text-sm shrink-0">
                           {student.avatarUrl ? (
                             <img
                               src={student.avatarUrl}
@@ -331,11 +352,22 @@ export default function AdmissionsPage() {
                             student.name.charAt(0).toUpperCase()
                           )}
                         </div>
-                        <div>
-                          <div className="font-semibold text-slate-900 text-sm leading-tight">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-900 text-sm leading-tight truncate">
                             {student.name}
                           </div>
-                          <div className="text-xs text-slate-500 mt-0.5">{student.email}</div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-xs text-slate-500 truncate">{student.email}</span>
+                            {student.emailVerified ? (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                                Verified
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+                                Unverified
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -364,6 +396,18 @@ export default function AdmissionsPage() {
                       >
                         {student.status}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {!student.emailVerified && (
+                        <button
+                          onClick={() => handleVerifyStudent(student)}
+                          disabled={verifyStudentEmailMutation.isPending}
+                          className="px-2.5 py-1 text-xs font-semibold rounded border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition shadow-2xs disabled:opacity-50"
+                          title="Manually verify email address"
+                        >
+                          Verify Email
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -569,6 +613,23 @@ export default function AdmissionsPage() {
                     <option value="Other">Other</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.verifyEmailImmediately}
+                    onChange={(e) => setFormData({ ...formData, verifyEmailImmediately: e.target.checked })}
+                    className="mt-0.5 rounded text-teal-600 focus:ring-teal-500"
+                  />
+                  <div>
+                    <span className="text-xs font-semibold text-slate-700">Verify email address immediately</span>
+                    <p className="text-[11px] text-slate-400">
+                      Skip email verification so the student can sign in right away with their initial password.
+                    </p>
+                  </div>
+                </label>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">

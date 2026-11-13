@@ -14,6 +14,26 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [resendSuccess, setResendSuccess] = useState(false);
+
+  const resendMutation = useMutation({
+    mutationFn: () =>
+      apiFetch('/auth/email/resend', {
+        method: 'POST',
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      }),
+    onSuccess: () => {
+      setResendSuccess(true);
+    },
+    onError: (err: unknown) => {
+      if (err instanceof ApiRequestError) {
+        setError(err.message);
+      } else {
+        setError('Failed to resend verification email.');
+      }
+    },
+  });
 
   const loginMutation = useMutation({
     mutationFn: () =>
@@ -28,8 +48,10 @@ export default function LoginPage() {
     onError: (err: unknown) => {
       if (err instanceof ApiRequestError) {
         setError(err.message);
+        setErrorCode(err.code);
       } else {
         setError('Failed to sign in. Please check your credentials.');
+        setErrorCode(null);
       }
     },
   });
@@ -39,6 +61,8 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setErrorCode(null);
+    setResendSuccess(false);
     loginMutation.mutate();
   };
 
@@ -61,9 +85,28 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="mb-5 p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2.5 text-xs text-red-700">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
+          <div className="mb-5 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 space-y-2">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+            {errorCode === 'EMAIL_NOT_VERIFIED' && (
+              <div className="pt-1 border-t border-red-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span className="text-[11px] text-red-600">
+                  {resendSuccess ? 'Verification email resent! Check your inbox.' : "Didn't receive the verification email?"}
+                </span>
+                {!resendSuccess && (
+                  <button
+                    type="button"
+                    onClick={() => resendMutation.mutate()}
+                    disabled={resendMutation.isPending || !email}
+                    className="font-semibold text-teal-800 hover:text-teal-900 underline text-left disabled:opacity-50"
+                  >
+                    {resendMutation.isPending ? 'Sending...' : 'Resend Verification Email'}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
 

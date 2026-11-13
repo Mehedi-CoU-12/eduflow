@@ -7,6 +7,7 @@ interface MemberRowProps {
   onManageChildren: (member: MemberDto) => void;
   onEditRoles: (member: MemberDto) => void;
   onToggleStatus: (member: MemberDto) => void;
+  onVerifyEmail: (member: MemberDto) => void;
   onRemove: (member: MemberDto) => void;
 }
 
@@ -15,6 +16,7 @@ export function MemberRow({
   onManageChildren,
   onEditRoles,
   onToggleStatus,
+  onVerifyEmail,
   onRemove,
 }: MemberRowProps) {
   const isGuardian = member.roles.some((r) => r.key === 'guardian');
@@ -38,7 +40,18 @@ export function MemberRow({
             <div className="font-semibold text-slate-900 text-sm leading-tight truncate">
               {member.user.name}
             </div>
-            <div className="text-xs text-slate-500 mt-0.5 truncate">{member.user.email}</div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-xs text-slate-500 truncate">{member.user.email}</span>
+              {member.user.emailVerified ? (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                  Verified
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+                  Unverified
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </td>
@@ -78,6 +91,15 @@ export function MemberRow({
       </td>
       <td className="px-6 py-4 text-right whitespace-nowrap">
         <div className="flex items-center justify-end gap-2">
+          {!member.user.emailVerified && (
+            <button
+              onClick={() => onVerifyEmail(member)}
+              className="px-2.5 py-1 text-xs font-semibold rounded border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition shadow-2xs"
+              title="Manually verify email address"
+            >
+              Verify Email
+            </button>
+          )}
           {isGuardian && (
             <button
               onClick={() => onManageChildren(member)}

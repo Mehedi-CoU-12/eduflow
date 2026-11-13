@@ -74,6 +74,16 @@ export class MembersController {
     return this.members.updateStatus(tenant, membershipId, input, meta);
   }
 
+  @Post(':membershipId/verify-email')
+  @RequirePermissions('users.update')
+  verifyEmail(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('membershipId', { schema: uuidSchema }) membershipId: string,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<MemberDto> {
+    return this.members.verifyMemberEmail(tenant, membershipId, meta);
+  }
+
   @Delete(':membershipId')
   @RequirePermissions('users.remove')
   remove(

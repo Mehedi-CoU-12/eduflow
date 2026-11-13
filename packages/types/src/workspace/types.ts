@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { SchoolSummaryDto, UserDto, AuditLogDto } from '../dto.js';
+import type { SchoolSummaryDto, AuditLogDto } from '../dto.js';
 import type { SchoolPermissionKey, PermissionScope } from '../access-control/permissions.js';
 
 export const WORKSPACE_TYPES = [
@@ -124,6 +124,7 @@ export interface StudentProfileDto {
   sectionId: string;
   sectionName: string;
   status: string;
+  emailVerified?: boolean;
 }
 
 export interface SubjectItem {
