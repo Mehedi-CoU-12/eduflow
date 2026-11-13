@@ -9,7 +9,7 @@ export const MEMBER_SELECT = {
   id: true,
   status: true,
   createdAt: true,
-  user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+  user: { select: { id: true, name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
   roles: {
     select: { role: { select: { id: true, key: true, name: true, schoolId: true } } },
     orderBy: { createdAt: 'asc' },
