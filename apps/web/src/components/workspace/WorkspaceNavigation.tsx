@@ -11,6 +11,38 @@ interface WorkspaceNavigationProps {
   onNavigate?: () => void;
 }
 
+function isNavItemActive(itemHref: string, currentPath: string): boolean {
+  if (currentPath === itemHref) return true;
+
+  const [itemPath, itemQuery] = itemHref.split('?');
+  const [currentBasePath, currentQuery] = currentPath.split('?');
+
+  if (currentBasePath !== itemPath) {
+    if (itemPath !== '/' && (currentBasePath?.startsWith(itemPath + '/') ?? false)) {
+      return true;
+    }
+    return false;
+  }
+
+  // Same base path (e.g. '/')
+  const currentParams = new URLSearchParams(currentQuery || '');
+  const itemParams = new URLSearchParams(itemQuery || '');
+
+  const itemWs = itemParams.get('workspace');
+  const currentWs = currentParams.get('workspace');
+  if (itemWs && itemWs !== currentWs) return false;
+
+  const itemTab = itemParams.get('tab');
+  const currentTab = currentParams.get('tab');
+
+  if (itemTab) {
+    return itemTab === currentTab;
+  }
+
+  // If item has no tab (e.g. /?workspace=student), active if no tab or dashboard/overview
+  return !currentTab || currentTab === 'dashboard' || currentTab === 'overview';
+}
+
 export function WorkspaceNavigation({ sections, currentPath, onNavigate }: WorkspaceNavigationProps) {
   return (
     <nav className="space-y-6">
@@ -26,7 +58,7 @@ export function WorkspaceNavigation({ sections, currentPath, onNavigate }: Works
             {section.items.map((item) => {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const IconComponent = (LucideIcons as any)[item.icon] || LucideIcons.Circle;
-              const isActive = currentPath === item.href || (item.href !== '/' && currentPath.startsWith(item.href));
+              const isActive = isNavItemActive(item.href, currentPath);
 
               return (
                 <Link
