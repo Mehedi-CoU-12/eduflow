@@ -16,6 +16,7 @@ import type { RequestMeta } from '../../common/http/request-context.js';
 import { APP_CONFIG } from '../../config/config.module.js';
 import type { AppConfig } from '../../config/env.js';
 import { AppDatabase } from '../../infrastructure/database/app-database.js';
+import { SystemDatabase } from '../../infrastructure/database/system-database.js';
 import { MailService } from '../../infrastructure/mail/mail.service.js';
 import { PermissionSet, type Grant } from '../access-control/permission-set.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -31,6 +32,7 @@ const INVITE_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export class MembersService {
   constructor(
     private readonly db: AppDatabase,
+    private readonly system: SystemDatabase,
     private readonly userProvisioning: UserProvisioningService,
     private readonly mail: MailService,
     private readonly members: MembersRepository,
@@ -272,13 +274,54 @@ export class MembersService {
   remove(tenant: TenantContext, membershipId: string, meta: RequestMeta): Promise<MemberDto> {
     return this.updateStatus(tenant, membershipId, { status: 'removed' }, meta);
   }
+
+  /** Manually marks a member's user email as verified (e.g. by school owner or admin). */
+  async verifyMemberEmail(
+    tenant: TenantContext,
+    membershipId: string,
+    meta: RequestMeta,
+  ): Promise<MemberDto> {
+    return this.db.withTenant(tenant, async (tx) => {
+      const member = await this.members.findById(tx, membershipId);
+      if (!member) throw memberNotFound();
+
+      if (!member.user.emailVerifiedAt) {
+        await this.system.client.user.update({
+          where: { id: member.user.id },
+          data: { emailVerifiedAt: new Date() },
+        });
+
+        await this.audit.record(
+          tx,
+          {
+            action: 'member.email_verified_manually',
+            entityType: 'school_membership',
+            entityId: member.id,
+            after: { email: member.user.email, emailVerified: true },
+            metadata: { userId: member.user.id },
+          },
+          meta,
+        );
+      }
+
+      const updated = await this.members.findById(tx, membershipId);
+      if (!updated) throw memberNotFound();
+      return toMemberDto(updated);
+    });
+  }
 }
 
 function toMemberDto(row: MemberRow): MemberDto {
   return {
     id: row.id,
     status: row.status,
-    user: row.user,
+    user: {
+      id: row.user.id,
+      name: row.user.name,
+      email: row.user.email,
+      avatarUrl: row.user.avatarUrl,
+      emailVerified: Boolean(row.user.emailVerifiedAt),
+    },
     roles: row.roles.map(({ role }) => ({
       id: role.id,
       key: role.key,
