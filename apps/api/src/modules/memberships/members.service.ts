@@ -19,10 +19,13 @@ import { AppDatabase } from '../../infrastructure/database/app-database.js';
 import { MailService } from '../../infrastructure/mail/mail.service.js';
 import { PermissionSet, type Grant } from '../access-control/permission-set.js';
 import { AuditService } from '../audit/audit.service.js';
+import { AuthTokenService } from '../auth/auth-token.service.js';
 import { UserProvisioningService } from '../auth/user-provisioning.service.js';
 import { schoolUrl } from '../tenancy/school-urls.js';
 import type { TenantContext } from '../tenancy/tenant-context.js';
 import { MEMBER_SELECT, MembersRepository, type MemberRow } from './members.repository.js';
+
+const INVITE_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 @Injectable()
 export class MembersService {
@@ -32,6 +35,7 @@ export class MembersService {
     private readonly mail: MailService,
     private readonly members: MembersRepository,
     private readonly audit: AuditService,
+    private readonly tokens: AuthTokenService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -186,12 +190,24 @@ export class MembersService {
     });
 
     // Send invitation email in the background
+    let inviteUrl: string;
+    let template: 'schoolInvite' | 'schoolInviteNewUser';
+
+    if (user.hasCredential) {
+      inviteUrl = schoolUrl(this.config, tenant.school.slug);
+      template = 'schoolInvite';
+    } else {
+      const token = await this.tokens.issue(user.id, 'password_reset', INVITE_TOKEN_TTL_MS);
+      inviteUrl = `${schoolUrl(this.config, tenant.school.slug)}/reset-password?token=${token}&mode=invite`;
+      template = 'schoolInviteNewUser';
+    }
+
     await this.mail.send({
       to: user.email,
-      template: 'schoolInvite',
+      template,
       locale: user.locale ?? tenant.school.defaultLocale,
       name: user.name,
-      url: schoolUrl(this.config, tenant.school.slug),
+      url: inviteUrl,
     });
 
     return toMemberDto(member);

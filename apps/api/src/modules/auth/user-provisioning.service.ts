@@ -7,6 +7,7 @@ export interface ProvisionedUser {
   readonly name: string;
   readonly email: string;
   readonly locale: string | null;
+  readonly hasCredential: boolean;
 }
 
 /**
@@ -18,11 +19,25 @@ export class UserProvisioningService {
   constructor(private readonly system: SystemDatabase) {}
 
   async findOrCreateForInvite(input: { email: string; name: string }): Promise<ProvisionedUser> {
-    return this.system.client.user.upsert({
+    const user = await this.system.client.user.upsert({
       where: { email: input.email },
       create: { email: input.email, name: input.name },
       update: {},
-      select: { id: true, name: true, email: true, locale: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        locale: true,
+        credential: { select: { userId: true } },
+      },
     });
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      locale: user.locale,
+      hasCredential: Boolean(user.credential),
+    };
   }
 }

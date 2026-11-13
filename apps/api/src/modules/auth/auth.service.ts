@@ -124,6 +124,12 @@ export class AuthService {
     if (!user.emailVerifiedAt) {
       throw AppError.forbidden('EMAIL_NOT_VERIFIED', 'Verify your email address before signing in');
     }
+    if (host.kind === 'school') {
+      await this.system.client.schoolMembership.updateMany({
+        where: { schoolId: host.school.id, userId: user.id, status: 'invited' },
+        data: { status: 'active' },
+      });
+    }
     await this.assertHostAccess(host, user.id);
 
     if (this.passwords.needsRehash(user.credential.passwordHash)) {
@@ -233,6 +239,11 @@ export class AuthService {
       }),
       // Following the emailed link proves ownership of the address.
       db.user.updateMany({ where: { id: userId, emailVerifiedAt: null }, data: { emailVerifiedAt: now } }),
+      // Activating any pending school invitations for this user.
+      db.schoolMembership.updateMany({
+        where: { userId, status: 'invited' },
+        data: { status: 'active' },
+      }),
       db.session.updateMany({
         where: { userId, revokedAt: null },
         data: { revokedAt: now, revokedReason: 'password_reset' },
@@ -252,6 +263,10 @@ export class AuthService {
         "The active school can only be changed on the account host; open the school's own address instead",
       );
     }
+    await this.system.client.schoolMembership.updateMany({
+      where: { schoolId, userId: auth.userId, status: 'invited' },
+      data: { status: 'active' },
+    });
     const tenant = await this.tenants.load(schoolId, auth.userId);
     if (!tenant) throw AppError.forbidden('TENANT_ACCESS_DENIED', 'You are not a member of this school');
     await this.sessions.setActiveSchool(auth.sessionId, schoolId);

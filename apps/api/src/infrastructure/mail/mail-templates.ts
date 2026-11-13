@@ -37,7 +37,27 @@ function linkEmail(subject: string, greeting: string, body: string, action: stri
   };
 }
 
-const templates: Record<'verifyEmail' | 'passwordReset' | 'accountExists' | 'schoolInvite', Record<Locale, Template>> = {
+const templates: Record<'verifyEmail' | 'passwordReset' | 'accountExists' | 'schoolInvite' | 'schoolInviteNewUser', Record<Locale, Template>> = {
+  schoolInviteNewUser: {
+    en: ({ name, url }) =>
+      linkEmail(
+        'You have been invited to join a school',
+        `Hello ${name},`,
+        'You have been invited to join a school on EduFlow. Click below to set up your password and access your school portal.',
+        'Set Password & Join School',
+        "If you were not expecting this invitation, you can ignore this email.",
+        url,
+      ),
+    bn: ({ name, url }) =>
+      linkEmail(
+        'আপনাকে একটি স্কুলে যোগদানের আমন্ত্রণ জানানো হয়েছে',
+        `নমস্কার/সালাম ${name},`,
+        'আপনাকে eduflow এর একটি স্কুলে যোগদানের আমন্ত্রণ জানানো হয়েছে। পাসওয়ার্ড সেট করতে এবং স্কুল পোর্টালে প্রবেশ করতে নিচে ক্লিক করুন।',
+        'পাসওয়ার্ড সেট করুন এবং স্কুলে যোগ দিন',
+        'আপনি যদি এই আমন্ত্রণটি আশা না করে থাকেন, তবে এই ইমেলটি উপেক্ষা করতে পারেন।',
+        url,
+      ),
+  },
   schoolInvite: {
     en: ({ name, url }) =>
       linkEmail(
@@ -52,7 +72,7 @@ const templates: Record<'verifyEmail' | 'passwordReset' | 'accountExists' | 'sch
       linkEmail(
         'আপনাকে একটি স্কুলে যোগদানের আমন্ত্রণ জানানো হয়েছে',
         `নমস্কার/সালাম ${name},`,
-        'আপনাকে শিক্ষা-কোরের একটি স্কুলে যোগদানের আমন্ত্রণ জানানো হয়েছে। স্কুল পোর্টালে প্রবেশ করতে নিচে ক্লিক করুন।',
+        'আপনাকে eduflow এর একটি স্কুলে যোগদানের আমন্ত্রণ জানানো হয়েছে। স্কুল পোর্টালে প্রবেশ করতে নিচে ক্লিক করুন।',
         'স্কুল পোর্টাল খুলুন',
         'আপনি যদি এই আমন্ত্রণটি আশা না করে থাকেন, তবে এই ইমেলটি উপেক্ষা করতে পারেন।',
         url,

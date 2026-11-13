@@ -24,6 +24,7 @@ export default function ResetPasswordPage() {
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const isInvite = searchParams.get('mode') === 'invite';
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -98,8 +99,14 @@ function ResetPasswordContent() {
           <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center mx-auto mb-3 shadow-sm">
             <GraduationCap className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Set New Password</h1>
-          <p className="text-xs text-slate-500 mt-1">Create a secure password for your EduFlow account</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            {isInvite ? 'Set Up Your Password' : 'Set New Password'}
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            {isInvite
+              ? 'Create a secure password to activate your account and join the school'
+              : 'Create a secure password for your EduFlow account'}
+          </p>
         </div>
 
         {error && (
@@ -113,9 +120,13 @@ function ResetPasswordContent() {
           <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-center space-y-4">
             <CheckCircle className="w-8 h-8 text-teal-600 mx-auto" />
             <div>
-              <h3 className="font-semibold text-slate-900 text-sm">Password Reset Successful</h3>
+              <h3 className="font-semibold text-slate-900 text-sm">
+                {isInvite ? 'Account Activated Successfully' : 'Password Set Successfully'}
+              </h3>
               <p className="text-xs text-slate-600 mt-1">
-                Your password has been updated and your email is confirmed. You can now sign in with your new credentials.
+                {isInvite
+                  ? 'Your password has been set and your account is active. You can now sign in with your credentials.'
+                  : 'Your password has been set and your email is confirmed. You can now sign in with your credentials.'}
               </p>
             </div>
             <Link
@@ -168,18 +179,37 @@ function ResetPasswordContent() {
               disabled={resetMutation.isPending}
               className="w-full py-2.5 px-4 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-semibold text-sm shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-60"
             >
-              {resetMutation.isPending ? 'Updating Password...' : 'Save New Password'}
+              {resetMutation.isPending
+                ? isInvite
+                  ? 'Activating Account...'
+                  : 'Updating Password...'
+                : isInvite
+                ? 'Activate Account & Join'
+                : 'Save New Password'}
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
         )}
 
-        <div className="mt-6 text-center text-xs text-slate-500">
-          Remembered your password?{' '}
-          <Link href="/login" className="text-teal-700 font-semibold hover:underline">
-            Back to Sign In
-          </Link>
-        </div>
+        {!success && (
+          <div className="mt-6 text-center text-xs text-slate-500">
+            {isInvite ? (
+              <>
+                Already set up your password?{' '}
+                <Link href="/login" className="text-teal-700 font-semibold hover:underline">
+                  Sign In
+                </Link>
+              </>
+            ) : (
+              <>
+                Remembered your password?{' '}
+                <Link href="/login" className="text-teal-700 font-semibold hover:underline">
+                  Back to Sign In
+                </Link>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
