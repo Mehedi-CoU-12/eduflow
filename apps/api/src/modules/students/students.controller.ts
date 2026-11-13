@@ -80,6 +80,16 @@ export class StudentsController {
     return this.students.updateStudent(tenant, id, input, meta);
   }
 
+  @Post('students/:id/verify-email')
+  @RequirePermissions('students.update')
+  verifyEmail(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id', { schema: uuidSchema }) id: string,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<StudentProfileDto> {
+    return this.students.verifyStudentEmail(tenant, id, meta);
+  }
+
   @Get('students/:id/guardians')
   @RequirePermissions('students.view')
   listStudentGuardians(
