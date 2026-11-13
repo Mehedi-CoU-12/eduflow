@@ -8,6 +8,7 @@ interface MembersTableProps {
   onManageChildren: (member: MemberDto) => void;
   onEditRoles: (member: MemberDto) => void;
   onToggleStatus: (member: MemberDto) => void;
+  onVerifyEmail: (member: MemberDto) => void;
   onRemove: (member: MemberDto) => void;
 }
 
@@ -17,6 +18,7 @@ export function MembersTable({
   onManageChildren,
   onEditRoles,
   onToggleStatus,
+  onVerifyEmail,
   onRemove,
 }: MembersTableProps) {
   return (
@@ -53,6 +55,7 @@ export function MembersTable({
                   onManageChildren={onManageChildren}
                   onEditRoles={onEditRoles}
                   onToggleStatus={onToggleStatus}
+                  onVerifyEmail={onVerifyEmail}
                   onRemove={onRemove}
                 />
               ))
