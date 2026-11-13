@@ -1,23 +1,31 @@
-import { Injectable } from '@nestjs/common';
-import {
-  type AdmitStudentInput,
-  type GuardianLinkDetailDto,
-  type LinkGuardianStudentInput,
-  type ListStudentsQuery,
-  type SectionRosterDto,
-  type StudentProfileDto,
-  type TransferStudentsInput,
-  type UpdateStudentProfileInput,
+import { Inject, Injectable } from '@nestjs/common';
+import type {
+  AdmitStudentInput,
+  GuardianLinkDetailDto,
+  LinkGuardianStudentInput,
+  ListStudentsQuery,
+  SectionRosterDto,
+  StudentProfileDto,
+  TransferStudentsInput,
+  UpdateStudentProfileInput,
 } from '@eduflow/types';
 
 import { AppError } from '../../common/errors/app-error.js';
 import type { RequestMeta } from '../../common/http/request-context.js';
+import { APP_CONFIG } from '../../config/config.module.js';
+import type { AppConfig } from '../../config/env.js';
 import { AppDatabase } from '../../infrastructure/database/app-database.js';
 import { SystemDatabase } from '../../infrastructure/database/system-database.js';
+import { MailService } from '../../infrastructure/mail/mail.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { AuthTokenService } from '../auth/auth-token.service.js';
 import { PasswordService } from '../auth/password.service.js';
 import { UserProvisioningService } from '../auth/user-provisioning.service.js';
+import { schoolUrl } from '../tenancy/school-urls.js';
 import type { TenantContext } from '../tenancy/tenant-context.js';
+
+const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const INVITE_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 interface StudentRowWithRelations {
   id: string;
@@ -31,6 +39,7 @@ interface StudentRowWithRelations {
     name: string;
     email: string;
     avatarUrl: string | null;
+    emailVerifiedAt?: Date | null;
   };
   class: {
     name: string;
@@ -54,6 +63,7 @@ function toStudentProfileDto(row: StudentRowWithRelations): StudentProfileDto {
     sectionId: row.sectionId,
     sectionName: row.section.name,
     status: row.status,
+    emailVerified: Boolean(row.user.emailVerifiedAt),
   };
 }
 
@@ -65,6 +75,9 @@ export class StudentsService {
     private readonly audit: AuditService,
     private readonly userProvisioning: UserProvisioningService,
     private readonly passwords: PasswordService,
+    private readonly mail: MailService,
+    private readonly tokens: AuthTokenService,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
   /**
@@ -76,7 +89,7 @@ export class StudentsService {
     input: AdmitStudentInput,
     meta: RequestMeta,
   ): Promise<StudentProfileDto> {
-    return this.db.withTenant(tenant, async (tx) => {
+    const result = await this.db.withTenant(tenant, async (tx) => {
       // 1. Verify Class exists in tenant
       const targetClass = await tx.db.class.findFirst({
         where: { id: input.classId, schoolId: tx.schoolId },
@@ -139,6 +152,21 @@ export class StudentsService {
           where: { id: user.id },
           data: { phone: input.phone },
         });
+      }
+
+      // Check current verification status
+      const existingUser = await this.system.client.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, email: true, name: true, locale: true, emailVerifiedAt: true },
+      });
+      let isVerified = Boolean(existingUser?.emailVerifiedAt);
+
+      if (input.verifyEmailImmediately && !isVerified) {
+        await this.system.client.user.update({
+          where: { id: user.id },
+          data: { emailVerifiedAt: new Date() },
+        });
+        isVerified = true;
       }
 
       // Set initial password if no credential exists yet
@@ -205,18 +233,27 @@ export class StudentsService {
           status: 'active',
         },
         include: {
-          user: { select: { name: true, email: true, avatarUrl: true } },
+          user: { select: { name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
           class: { select: { name: true } },
           section: { select: { name: true } },
         },
       });
 
       // 9. Optional Guardian linking during admission
+      let guardianInviteInfo: { email: string; name: string; locale: string | null; hasCredential: boolean; id: string } | null = null;
       if (input.guardianEmail) {
         const guardianUser = await this.userProvisioning.findOrCreateForInvite({
           email: input.guardianEmail,
           name: `${input.name}'s Guardian`,
         });
+
+        guardianInviteInfo = {
+          id: guardianUser.id,
+          email: guardianUser.email,
+          name: guardianUser.name,
+          locale: guardianUser.locale,
+          hasCredential: guardianUser.hasCredential,
+        };
 
         // Ensure guardian membership & role
         const guardianRole = await tx.db.role.findFirst({
@@ -286,8 +323,65 @@ export class StudentsService {
         meta,
       );
 
-      return toStudentProfileDto(created);
+      return {
+        profile: toStudentProfileDto(created),
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          locale: user.locale,
+        },
+        isVerified,
+        guardianInviteInfo,
+      };
     });
+
+    // Send email to student
+    if (!result.isVerified) {
+      const token = await this.tokens.issue(result.user.id, 'email_verification', EMAIL_VERIFICATION_TTL_MS);
+      const verifyUrl = `${schoolUrl(this.config, tenant.school.slug)}/verify-email?token=${token}`;
+      await this.mail.send({
+        to: result.user.email,
+        template: 'verifyEmail',
+        locale: result.user.locale ?? tenant.school.defaultLocale,
+        name: result.user.name,
+        url: verifyUrl,
+      });
+    } else {
+      const portalUrl = schoolUrl(this.config, tenant.school.slug);
+      await this.mail.send({
+        to: result.user.email,
+        template: 'schoolInvite',
+        locale: result.user.locale ?? tenant.school.defaultLocale,
+        name: result.user.name,
+        url: portalUrl,
+      });
+    }
+
+    // Optional guardian notification
+    if (result.guardianInviteInfo) {
+      if (!result.guardianInviteInfo.hasCredential) {
+        const token = await this.tokens.issue(result.guardianInviteInfo.id, 'password_reset', INVITE_TOKEN_TTL_MS);
+        const inviteUrl = `${schoolUrl(this.config, tenant.school.slug)}/reset-password?token=${token}&mode=invite`;
+        await this.mail.send({
+          to: result.guardianInviteInfo.email,
+          template: 'schoolInviteNewUser',
+          locale: result.guardianInviteInfo.locale ?? tenant.school.defaultLocale,
+          name: result.guardianInviteInfo.name,
+          url: inviteUrl,
+        });
+      } else {
+        await this.mail.send({
+          to: result.guardianInviteInfo.email,
+          template: 'schoolInvite',
+          locale: result.guardianInviteInfo.locale ?? tenant.school.defaultLocale,
+          name: result.guardianInviteInfo.name,
+          url: schoolUrl(this.config, tenant.school.slug),
+        });
+      }
+    }
+
+    return result.profile;
   }
 
   /**
@@ -313,7 +407,7 @@ export class StudentsService {
       const rows = await tx.db.studentProfile.findMany({
         where,
         include: {
-          user: { select: { name: true, email: true, avatarUrl: true } },
+          user: { select: { name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
           class: { select: { name: true } },
           section: { select: { name: true } },
         },
@@ -338,7 +432,7 @@ export class StudentsService {
       const row = await tx.db.studentProfile.findFirst({
         where: { id: studentId, schoolId: tx.schoolId },
         include: {
-          user: { select: { name: true, email: true, avatarUrl: true } },
+          user: { select: { name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
           class: { select: { name: true } },
           section: { select: { name: true } },
         },
@@ -376,7 +470,7 @@ export class StudentsService {
           ...(input.status ? { status: input.status } : {}),
         },
         include: {
-          user: { select: { name: true, email: true, avatarUrl: true } },
+          user: { select: { name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
           class: { select: { name: true } },
           section: { select: { name: true } },
         },
@@ -399,6 +493,59 @@ export class StudentsService {
   }
 
   /**
+   * Manually marks a student's user email as verified (by school owner or admin).
+   */
+  async verifyStudentEmail(
+    tenant: TenantContext,
+    studentId: string,
+    meta: RequestMeta,
+  ): Promise<StudentProfileDto> {
+    return this.db.withTenant(tenant, async (tx) => {
+      const student = await tx.db.studentProfile.findFirst({
+        where: { id: studentId, schoolId: tx.schoolId },
+        include: {
+          user: { select: { id: true, name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
+          class: { select: { name: true } },
+          section: { select: { name: true } },
+        },
+      });
+      if (!student) {
+        throw AppError.notFound('STUDENT_NOT_FOUND', 'Student record not found in this school');
+      }
+
+      if (!student.user.emailVerifiedAt) {
+        await this.system.client.user.update({
+          where: { id: student.userId },
+          data: { emailVerifiedAt: new Date() },
+        });
+
+        await this.audit.record(
+          tx,
+          {
+            action: 'student.email_verified_manually',
+            entityType: 'student_profile',
+            entityId: student.id,
+            after: { email: student.user.email, emailVerified: true },
+            metadata: { userId: student.userId },
+          },
+          meta,
+        );
+      }
+
+      const updated = await tx.db.studentProfile.findFirst({
+        where: { id: studentId, schoolId: tx.schoolId },
+        include: {
+          user: { select: { name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
+          class: { select: { name: true } },
+          section: { select: { name: true } },
+        },
+      });
+      if (!updated) throw AppError.notFound('STUDENT_NOT_FOUND', 'Student record not found in this school');
+      return toStudentProfileDto(updated);
+    });
+  }
+
+  /**
    * Section Rostering: Retrieves section roster with capacity metrics and enrolled students.
    */
   async getSectionRoster(tenant: TenantContext, sectionId: string): Promise<SectionRosterDto> {
@@ -415,7 +562,7 @@ export class StudentsService {
       const students = await tx.db.studentProfile.findMany({
         where: { sectionId, schoolId: tx.schoolId, status: 'active' },
         include: {
-          user: { select: { name: true, email: true, avatarUrl: true } },
+          user: { select: { name: true, email: true, avatarUrl: true, emailVerifiedAt: true } },
           class: { select: { name: true } },
           section: { select: { name: true } },
         },
