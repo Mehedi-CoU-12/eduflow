@@ -305,6 +305,17 @@ describe('DashboardService', () => {
       expect(res.recentTransactions).toHaveLength(2);
     });
 
+    it('allows school owner to retrieve financial dashboard data', async () => {
+      const tenant = createTenant([{ id: 'r1', key: 'school_owner', name: 'School Owner' }]);
+      fakeTx.db.class.count.mockResolvedValue(10);
+      fakeTx.db.studentProfile.count.mockResolvedValue(250);
+
+      const res = await service.getAccountantDashboard(tenant);
+      expect(res.feeStructuresCount).toBe(10);
+      expect(res.metrics.totalCollected).toBeGreaterThan(0);
+      expect(res.recentTransactions).toHaveLength(2);
+    });
+
     it('returns honest planned state for librarian and hr staff', async () => {
       const tenant = createTenant([{ id: 'r1', key: 'librarian', name: 'Librarian' }]);
       const lib = service.getLibrarianDashboard(tenant);

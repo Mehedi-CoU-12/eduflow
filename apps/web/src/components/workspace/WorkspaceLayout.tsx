@@ -65,16 +65,29 @@ export function WorkspaceLayout({
   useEffect(() => {
     if (storageKey && typeof window !== 'undefined') {
       const stored = localStorage.getItem(storageKey) as WorkspaceType | null;
-      if (stored) setLocalWorkspace(stored);
+      if (stored) {
+        if (availableWorkspaces.length > 0 && !availableWorkspaces.some((w) => w.type === stored)) {
+          localStorage.setItem(storageKey, defaultWorkspace);
+          setLocalWorkspace(defaultWorkspace);
+        } else {
+          setLocalWorkspace(stored);
+        }
+      }
     }
-  }, [storageKey]);
+  }, [storageKey, availableWorkspaces, defaultWorkspace]);
 
   let currentWorkspace: WorkspaceType = propActiveWorkspace || defaultWorkspace;
 
+  const validLocalWorkspace =
+    localWorkspace &&
+    (availableWorkspaces.length === 0 || availableWorkspaces.some((w) => w.type === localWorkspace))
+      ? localWorkspace
+      : null;
+
   if (queryWorkspace) {
     currentWorkspace = queryWorkspace;
-  } else if (localWorkspace) {
-    currentWorkspace = localWorkspace;
+  } else if (validLocalWorkspace) {
+    currentWorkspace = validLocalWorkspace;
   }
 
   // Verify authorization: check if currentWorkspace is in availableWorkspaces
@@ -106,6 +119,19 @@ export function WorkspaceLayout({
   if (pathname && pathname !== '/') {
     const segment = pathname.replace(/^\//, '').split('/')[0]!;
     breadcrumbs.push({ label: segment.charAt(0).toUpperCase() + segment.slice(1) });
+  } else {
+    const currentTab = searchParams.get('tab');
+    if (currentTab && currentTab !== 'overview') {
+      const activeItem = navigationSections
+        .flatMap((s) => s.items)
+        .find((item) => {
+          const itemTab = new URLSearchParams(item.href.split('?')[1] || '').get('tab');
+          return itemTab === currentTab;
+        });
+      if (activeItem) {
+        breadcrumbs.push({ label: activeItem.label });
+      }
+    }
   }
 
   const searchString = searchParams?.toString();

@@ -251,6 +251,7 @@ function SchoolView() {
   }
 
   const queryWorkspace = searchParams.get('workspace') as WorkspaceType | null;
+  const currentTab = searchParams.get('tab');
   const storageKey = school ? `eduflow_active_ws_${school.id}` : null;
   const localWorkspace =
     typeof window !== 'undefined' && storageKey
@@ -258,13 +259,21 @@ function SchoolView() {
       : null;
 
   const defaultWorkspace = workspacesData?.defaultWorkspace ?? 'admin';
-  const activeWorkspace = queryWorkspace || localWorkspace || defaultWorkspace;
+  const availableWorkspaces = workspacesData?.workspaces ?? [];
+  const validLocalWorkspace =
+    localWorkspace && availableWorkspaces.some((w) => w.type === localWorkspace)
+      ? localWorkspace
+      : null;
+  const activeWorkspace = queryWorkspace || validLocalWorkspace || defaultWorkspace;
 
   const renderDashboard = () => {
     switch (activeWorkspace) {
       case 'owner':
       case 'admin':
       case 'principal':
+        if (currentTab === 'fees') {
+          return <AccountantDashboard />;
+        }
         return <AdminDashboard />;
       case 'teacher':
         return <TeacherDashboard />;

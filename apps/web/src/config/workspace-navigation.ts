@@ -30,7 +30,7 @@ export const WORKSPACE_NAVIGATION: Record<WorkspaceType, NavSection[]> = {
         { id: 'attendance', label: 'Attendance', href: '/?workspace=owner&tab=attendance', icon: 'CalendarCheck', requiredPermission: 'attendance.view', isPlanned: true, badge: 'Planned' },
         { id: 'examinations', label: 'Examinations', href: '/?workspace=owner&tab=examinations', icon: 'FileSpreadsheet', requiredPermission: 'results.view', isPlanned: true, badge: 'Planned' },
         { id: 'results', label: 'Results', href: '/?workspace=owner&tab=results', icon: 'Award', requiredPermission: 'results.publish', isPlanned: true, badge: 'Planned' },
-        { id: 'fees', label: 'Fees & Finance', href: '/?workspace=accountant', icon: 'DollarSign', requiredPermission: 'fees.view' },
+        { id: 'fees', label: 'Fees & Finance', href: '/?workspace=owner&tab=fees', icon: 'DollarSign', requiredPermission: 'fees.view' },
       ],
     },
     {
@@ -54,6 +54,7 @@ export const WORKSPACE_NAVIGATION: Record<WorkspaceType, NavSection[]> = {
         { id: 'members', label: 'Members Directory', href: '/members', icon: 'Users', requiredPermission: 'users.view' },
         { id: 'roles', label: 'Roles & Scopes', href: '/roles', icon: 'Shield', requiredPermission: 'roles.view' },
         { id: 'attendance', label: 'Attendance', href: '/?workspace=admin&tab=attendance', icon: 'CalendarCheck', requiredPermission: 'attendance.view', isPlanned: true, badge: 'Planned' },
+        { id: 'fees', label: 'Fees & Finance', href: '/?workspace=admin&tab=fees', icon: 'DollarSign', requiredPermission: 'fees.view' },
       ],
     },
     {
